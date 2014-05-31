@@ -1,0 +1,183 @@
+/**
+ * @author Eugene Maslovich <ehpc@em42.ru>
+ */
+
+/*global waitingDialog, mainController*/
+
+(function ($) {
+	'use strict';
+
+	/**
+	 * Создаёт объект из выбранных пользователем настроек репозиториев
+	 * @returns {Object|null} Объект или null, если выбраны неверные значения
+	 */
+	function getSelectedData() {
+		var $checkedRepos = $('.selectRepo:checked'),
+			patchName = $('#formPatchName').val(),
+			data = {};
+		if (!patchName) {
+			alert('Укажите название патча.');
+			return null;
+		}
+		else if (!$checkedRepos.length) {
+			alert('Выберите хотя бы один репозиторий.');
+			return null;
+		}
+		data.name = patchName;
+		data.repos = [];
+		// Для каждого репозитория
+		$checkedRepos.each(function () {
+			var $row = $(this).closest('.repoRow'),
+				alias = $(this).val(),
+				branch = $row.find('.formBranch').val(),
+				startRev = $row.find('.formStartRev').val(),
+				endRev = $row.find('.formEndRev').val();
+			// Если сборка для всей ветки
+			if (branch) {
+				data.repos.push({
+					alias: alias,
+					type: 'branch',
+					branch: branch
+				});
+			}
+			// Если сборка по диапазону ревизий
+			else if (startRev && endRev) {
+				data.repos.push({
+					alias: alias,
+					type: 'rev',
+					startRev: startRev,
+					endRev: endRev
+				});
+			}
+			// Если ничего не выбрано
+			else {
+				alert('Выберите ветку или диапазон ревизий для репозитория «' + alias + '».');
+				data = null;
+				return false;
+			}
+		});
+		return data;
+	}
+
+	$(document).ready(function () {
+
+		var $formSettings = $('#formSettings');
+
+		// Инициализируем красивые селекторы
+		$('.selectpicker').selectpicker();
+
+		// Кнопка сборки патча и залития в svn
+		$('#buttonPatchSvn').on('click', function () {
+			var data = getSelectedData();
+			if (data) {
+				waitingDialog.show('Собираем патч...');
+				mainController.makePatch('patch_svn', data).done(function (res) {
+					waitingDialog.hide();
+					info('Патч «' + res.name + '» успешно собран.');
+				});
+			}
+		});
+
+		// Кнопка сборки патча и скачивания архива
+		$('#buttonPatchDownload').on('click', function () {
+			var data = getSelectedData();
+			if (data) {
+				waitingDialog.show('Собираем патч...');
+				mainController.makePatch('patch_download', data).done(function (res) {
+					waitingDialog.hide();
+					info('Патч «' + res.name + '» доступен по ссылке: <a href="' + res.url + '">' + res.url + '</a>');
+				});
+			}
+		});
+
+		// Кнопка сборки дистрибутива и залития в svn
+		$('#buttonDistribSvn').on('click', function () {
+			var data = getSelectedData();
+			if (data) {
+				waitingDialog.show('Собираем дистрибутив...');
+				mainController.makePatch('distrib_svn', data).done(function (res) {
+					waitingDialog.hide();
+					info('Дистрибутив «' + res.name + '» успешно собран.');
+				});
+			}
+		});
+
+		// Кнопка сборки дистрибутива и скачивания архива
+		$('#buttonDistribDownload').on('click', function () {
+			var data = getSelectedData();
+			if (data) {
+				waitingDialog.show('Собираем дистрибутив...');
+				mainController.makePatch('distrib_download', data).done(function (res) {
+					waitingDialog.hide();
+					info('Дистрибутив «' + res.name + '» доступен по ссылке: <a href="' + res.url + '">' + res.url + '</a>');
+				});
+			}
+		});
+
+		// Кнопка сохранения настроек
+		$('#buttonSaveSettings').on('click', function () {
+			waitingDialog.show('Сохраняем настройки...');
+			mainController.setSettings(JSON.parse($formSettings.val())).done(function () {
+				waitingDialog.hide();
+				location.reload();
+			});
+		});
+
+		// Кнопка сброса настроек
+		$('#buttonResetSettings').on('click', function () {
+			waitingDialog.show('Сбрасываем настройки...');
+			mainController.resetSettings().done(function () {
+				location.reload();
+			});
+		});
+	});
+
+})(jQuery);
+
+/**
+ * Отображает сообщения об ошибках
+ * @param message Сообщение
+ */
+var alert = function (message) {
+	'use strict';
+	var $alert = $(
+			'<div class="alert alert-danger alert-dismissable fade">' +
+			'<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>' +
+			message +
+			'</div>');
+	$('#alertContainer').prepend($alert.fadeIn()).children().addClass('in').scrollTo();
+};
+
+/**
+ * Отображает произвольные сообщения
+ * @param message Сообщение
+ */
+var info = function (message) {
+	'use strict';
+	var $alert = $(
+			'<div class="alert alert-info alert-dismissable">' +
+			'<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>' +
+			message +
+			'</div>');
+	$('#alertContainer').prepend($alert.fadeIn()).children().addClass('in').scrollTo();
+};
+
+jQuery.fn.extend({
+	/**
+	 * Плавный переход к элементу на странице
+	 * @param interval Интервал скроллинга
+	 * @param offset Смещение скроллинга
+	 */
+	scrollTo: function (interval, offset) {
+		'use strict';
+		if (typeof interval === 'undefined') {
+			interval = 1000;
+		}
+		if (typeof offset === 'undefined') {
+			offset = -100;
+		}
+		jQuery('html, body').animate({
+			scrollTop: jQuery(this).offset().top + offset
+		}, interval);
+	}
+});
