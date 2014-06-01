@@ -9,9 +9,27 @@
 
 	/**
 	 * Создаёт объект из выбранных пользователем настроек репозиториев
+	 * @param action Тип действия
 	 * @returns {Object|null} Объект или null, если выбраны неверные значения
 	 */
-	function getSelectedData() {
+	function getSelectedData(action) {
+		/*
+		Пример возвращаемых данных:
+		{
+			type: 'patch_download',
+			patchData:
+			{
+				name: 'dfsdfds',
+				repos: [
+					{
+						alias: 'myrepo',
+						type: 'branch',
+						branch: '046'
+					}
+				]
+			}
+		}
+		 */
 		var $checkedRepos = $('.selectRepo:checked'),
 			patchName = $('#formPatchName').val(),
 			data = {};
@@ -68,7 +86,7 @@
 
 		// Кнопка сборки патча и залития в svn
 		$('#buttonPatchSvn').on('click', function () {
-			var data = getSelectedData();
+			var data = getSelectedData('patch_svn');
 			if (data) {
 				waitingDialog.show('Собираем патч...');
 				mainController.makePatch('patch_svn', data).done(function (res) {
@@ -80,7 +98,7 @@
 
 		// Кнопка сборки патча и скачивания архива
 		$('#buttonPatchDownload').on('click', function () {
-			var data = getSelectedData();
+			var data = getSelectedData('patch_download');
 			if (data) {
 				waitingDialog.show('Собираем патч...');
 				mainController.makePatch('patch_download', data).done(function (res) {
@@ -92,7 +110,7 @@
 
 		// Кнопка сборки дистрибутива и залития в svn
 		$('#buttonDistribSvn').on('click', function () {
-			var data = getSelectedData();
+			var data = getSelectedData('distrib_svn');
 			if (data) {
 				waitingDialog.show('Собираем дистрибутив...');
 				mainController.makePatch('distrib_svn', data).done(function (res) {
@@ -104,7 +122,7 @@
 
 		// Кнопка сборки дистрибутива и скачивания архива
 		$('#buttonDistribDownload').on('click', function () {
-			var data = getSelectedData();
+			var data = getSelectedData('distrib_download');
 			if (data) {
 				waitingDialog.show('Собираем дистрибутив...');
 				mainController.makePatch('distrib_download', data).done(function (res) {

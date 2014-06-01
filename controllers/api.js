@@ -9,33 +9,69 @@
 var router = require('express').Router(),
 	fs = require('fs'),
 	Q = require('q'),
+	path = require('path'),
 	readFile = Q.denodeify(fs.readFile),
 	helper = require('controllers/helper');
 
 router
+	// Создание патча
 	.post('/api/make-patch', function (req, res) {
-		var data = req.body;
+		var data = req.body,
+			downloadsDir = path.join(__dirname, '..', 'downloads');
+		console.log('Директория загрузок: «' + downloadsDir + '»');
 		console.log('Собираем патч «' + data.patchData.name + '»');
-		if (data.type === 'patch_svn') {
-			console.log('Сборка патча для SVN');
-		}
-		else if (data.type === 'patch_download') {
-			console.log('Сборка патча для загрузки');
-			data.patchData.repos.forEach(function (repo) {
-				console.log('Собираем репозиторий «' + repo.alias + '»');
+		// Инициализируем все репозитории по необходимости
+		helper.initAllIfNeeded()
+			.then(function () {
+				// Обновляем все репозитории
+				return helper.updateAll();
+			})
+			.then(function () {
+				return helper.cleanFilesTempDir();
+			})
+			.done(function () {
+				var asyncs = [];
+				// Если сборка патча в SVN
+				if (data.type === 'patch_svn') {
+					console.log('Сборка патча для SVN');
+					// TODO:
+				}
+				// Если сборка патча с загрузкой
+				else if (data.type === 'patch_download') {
+					console.log('Сборка патча для загрузки');
+					// Для каждого репозитория
+					data.patchData.repos.forEach(function (repo) {
+						console.log('Собираем репозиторий «' + repo.alias + '»');
+						console.log('Настройки для репозитория «' + repo.alias + '»:', repo);
+						// Создаём патч для репозитория
+						asyncs.push(helper.createRepoDiff(repo));
+					});
+					Q.all(asyncs)
+						.then(function () {
+							// Создаём архив патча
+							return helper.createArchive(data.patchData.name, downloadsDir);
+						})
+						.done(function (archName) {
+							console.log('Создан архив патча «' + archName + '»');
+							// Отдаём информацию на интерфейс
+							res.json({
+								name: data.patchData.name,
+								status: 'ok',
+								url: '/shared/' + archName
+							});
+						});
+				}
+				// Если сборка дистрибутива в SVN
+				else if (data.type === 'distrib_svn') {
+					console.log('Сборка дистрибутива для SVN');
+					// TODO:
+				}
+				// Если сборка дистрибутива с загрузкой
+				else if (data.type === 'distrib_download') {
+					console.log('Сборка дистрибутива для загрузки');
+					// TODO:
+				}
 			});
-		}
-		else if (data.type === 'distrib_svn') {
-			console.log('Сборка дистрибутива для SVN');
-		}
-		else if (data.type === 'distrib_download') {
-			console.log('Сборка дистрибутива для загрузки');
-		}
-		res.json({
-			name: data.patchData.name,
-			status: 'ok',
-			url: 'http://test.em42.ru/downloads/repo.tar.gz'
-		});
 	})
 
 	// Выдача настроек

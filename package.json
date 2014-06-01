@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "node ./bin/server"
+    "start": "node ./bin/server-debug"
   },
   "dependencies": {
     "body-parser": "~1.0.0",
@@ -21,6 +21,7 @@
     "grunt-contrib-watch": "^0.6.1",
     "grunt-express-server": "^0.4.17",
     "grunt-external-daemon": "^1.1.0",
+    "grunt-forever": "^0.4.4",
     "node-inspector": "^0.7.3"
   }
 }

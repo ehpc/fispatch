@@ -25,6 +25,7 @@ app.use(bodyParser.urlencoded());
 // Конфигурируем статику
 app.use('/', express.static(path.join(__dirname, 'public')));
 app.use('/vendor/', express.static(path.join(__dirname, 'bower_components')));
+app.use('/shared/', express.static(path.join(__dirname, 'downloads')));
 
 
 // Подключаем контроллеры

@@ -22,6 +22,213 @@ var helper = helper || (function () {
 		readFile = Q.denodeify(fs.readFile),
 		colorsModule = require('controllers/colors');
 
+
+	function createRepoDiff(snapshotSettings) {
+		var deferred = Q.defer();
+		console.log('Создаём патч для репозитория «' + snapshotSettings.alias + '»');
+		readFile('data/settings.json', 'utf8').done(function (data) {
+			var settings = JSON.parse(data),
+				tempDir = settings.temp;
+			// Находим настройки для репозитория
+			settings.repositories.forEach(function (repository) {
+				if (repository.alias === snapshotSettings.alias) {
+					// Временная директория изменённых файлов репозитория
+					var filesTempDir = path.join(tempDir, 'files_temp/' + snapshotSettings.alias);
+					// Если собираем ветку целиком
+					if (snapshotSettings.type === 'branch') {
+						console.log('Собираем ветку целиком для репозитория «' + snapshotSettings.alias + '»');
+						// Устанавливаем нужную ветку
+						switchBranch(repository, tempDir, snapshotSettings.branch)
+							.then(function () {
+								// Достаём ревизии ветки
+								return getBranchRevisions(repository, tempDir, snapshotSettings.branch);
+							})
+							.then(function (revs) {
+								console.log('Ревизии репозитория «' + snapshotSettings.alias + '»', revs);
+								console.log('Копируем изменённые файлы репозитория «' + snapshotSettings.alias + '»');
+								return copyChangesFilesToTemp(repository, tempDir, revs, filesTempDir);
+							})
+							.done(function () {
+								console.log('Скопировали изменённые файлы репозитория «' + snapshotSettings.alias + '» в директорию «' + filesTempDir + '»');
+								deferred.resolve();
+							});
+					}
+					// Если собираем диапазон ревизий
+					else if (snapshotSettings.type === 'rev') {
+						console.log('Собираем диапазон ревизий для репозитория «' + snapshotSettings.alias + '»');
+					}
+					else {
+						console.log('Неверный формат сборки репозитория «' + snapshotSettings.alias + '»');
+						deferred.resolve(null);
+					}
+				}
+			});
+		});
+		return deferred.promise;
+	}
+
+	/**
+	 * Очищает временную директорию измененных файлов
+	 * @returns {Q.Promise<null>}
+	 */
+	function cleanFilesTempDir() {
+		var deferred = Q.defer();
+		readFile('data/settings.json', 'utf8').done(function (data) {
+			var settings = JSON.parse(data),
+				tempDir = settings.temp,
+				filesTempDirBase = path.join(tempDir, 'files_temp/');
+			// Чистим временную директорию изменённых файлов
+			exec('rm -rf "' + filesTempDirBase + '"').done(function () {
+				return deferred.resolve(null);
+			});
+		});
+		return deferred.promise;
+	}
+
+	/**
+	 * Создаёт архив патча
+	 * @param patchName Название патча
+	 * @param downloadsDir Директория, в которую будет помещён архив
+	 * @returns {Q.Promise<String>}
+	 */
+	function createArchive(patchName, downloadsDir) {
+		var deferred = Q.defer();
+		readFile('data/settings.json', 'utf8').done(function (data) {
+			var settings = JSON.parse(data),
+				tempDir = settings.temp,
+				filesTempDirBase = path.join(tempDir, 'files_temp/'),
+				archName = Date.now() + '_' + patchName + '.tar.gz',
+				archFullName = path.join(downloadsDir, archName);
+			exec('tar -czf "' + archFullName + '" -C "' + filesTempDirBase + '" .').done(function () {
+				deferred.resolve(archName);
+			});
+		});
+		return deferred.promise;
+	}
+
+	/**
+	 * Находит изменённые файлы и копирует их во временную директорию
+	 * @param repository Репозиторий
+	 * @param tempDir Временная директория
+	 * @param revs Объект с ревизиями
+	 * @param filesTempDir Временная директория назначения
+	 * @returns {Q.Promise<null>}
+	 */
+	function copyChangesFilesToTemp(repository, tempDir, revs, filesTempDir) {
+		var deferred = Q.defer(),
+			changedFiles = [],
+			repositoryPath = path.join(tempDir, repository.alias);
+		// Получаем изменённые файлы
+		getChangedFiles(repository, tempDir, revs.startRev, revs.endRev)
+			.then(function (files) {
+				console.log('Изменённые файлы репозитория «' + repository.alias + '»', files);
+				changedFiles = files;
+				// Создаём временную директорию
+				return exec('rm -rf ' + filesTempDir);
+			})
+			.then(function () {
+				return exec('mkdir -p ' + filesTempDir);
+			})
+			.then(function () {
+				var asyncs1 = [],
+					asyncs2 = [];
+				console.log('Создали временную директорию «' + filesTempDir + '»');
+				// Копируем файлы, создавая необходимые директории
+				changedFiles.forEach(function (file) {
+					var source = path.join(repositoryPath, file),
+						dest = path.join(filesTempDir, file),
+						destDir = path.dirname(path.join(filesTempDir, file));
+					asyncs1.push(exec('mkdir -p "' + destDir + '"'));
+					asyncs2.push(exec('cp "' + source + '" "' + dest + '"'));
+				});
+				return Q.all(asyncs1).done(function () {
+					return Q.all(asyncs2);
+				});
+			})
+			.done(function () {
+				deferred.resolve();
+			});
+		return deferred.promise;
+	}
+
+	/**
+	 * Возвращает список изменённых между ревизиями файлов. Начальная ревизия исключается из поиска.
+	 * @param repository Репозиторий
+	 * @param tempDir Временная директория
+	 * @param startRev Начальная ревизия
+	 * @param endRev Конечная ревизия
+	 * @returns {Q.Promise<Array>}
+	 */
+	function getChangedFiles(repository, tempDir,startRev, endRev) {
+		var repositoryPath = path.join(tempDir, repository.alias),
+			deferred = Q.defer();
+		console.log('Находим изменённые файлы для репозитория «' + repository.alias + '»');
+		exec('hg status -A --rev ' + startRev + ':' + endRev + ' -R ' + repositoryPath)
+			.done(function (out) {
+				// Команда вернула нам список файлов с их статусами в репозитории
+				var fileStatuses = out[0].split("\n"),
+					fileNames = [];
+				// Для всех файлов в списке
+				fileStatuses.forEach(function (fileStatus) {
+					var rx = new RegExp('(.+)\\s+(.+)', 'g'),
+						res;
+					while ((res = rx.exec(fileStatus)) !== null) {
+						// Если файл был модифицирован или добавлен
+						if (res[1] === 'M' || res[1] === 'A') {
+							fileNames.push(res[2]);
+						}
+					}
+				});
+				deferred.resolve(fileNames);
+			});
+		return deferred.promise;
+	}
+
+	/**
+	 * Достаёт хеши родительской и последней ревизий ветки
+	 * @param repository Репозиторий
+	 * @param tempDir Временная директория
+	 * @param branch Ветка
+	 * @returns {Q.Promise<Object>}
+	 */
+	function getBranchRevisions(repository, tempDir, branch) {
+		var repositoryPath = path.join(tempDir, repository.alias),
+			deferred = Q.defer(),
+			startRev, endRev;
+		console.log('Вычисляем обрамляющие ревизии репозитория «' + repository.alias + '» для ветки «' + branch + '»');
+		exec('hg log -r "parents(min(branch(\'' + branch + '\')))" --template "{node}\n" -R ' + repositoryPath)
+			.then(function (out) {
+				startRev = out[0].split("\n")[0];
+				return exec('hg log -r "max(branch(\'' + branch + '\'))" --template "{node}\n" -R ' + repositoryPath);
+			})
+			.done(function (out) {
+				endRev = out[0].split("\n")[0];
+				deferred.resolve({
+					startRev: startRev,
+					endRev: endRev
+				});
+			});
+		return deferred.promise;
+	}
+
+	/**
+	 * Меняем активную ветку репозитория
+	 * @param repository Репозиторий
+	 * @param tempDir Временная директория
+	 * @param branch Название ветки
+	 * @returns {Q.Promise<null>}
+	 */
+	function switchBranch(repository, tempDir, branch) {
+		var repositoryPath = path.join(tempDir, repository.alias),
+			deferred = Q.defer();
+		console.log('Меняем ветку репозитория «' + repository.alias + '» на «' + branch + '»');
+		exec('hg update --clean "' + branch + '" -R ' + repositoryPath)
+			.done(function () {
+				deferred.resolve(null);
+			});
+		return deferred.promise;
+	}
+
 	/**
 	 * Получает данные о репозиториях
 	 * @returns {Q.Promise<null>}
@@ -32,33 +239,9 @@ var helper = helper || (function () {
 		readFile('data/settings.json', 'utf8').done(function (data) {
 			var settings = JSON.parse(data),
 				tempDir = settings.temp,
-				i,
-				needInit = false,
-				initDeferred = Q.defer();
+				i;
 
-			console.log('Проверяем, загружены ли репозитории');
-			for (i = 0; i < settings.repositories.length; i++) {
-				var repository = settings.repositories[i],
-					repositoryPath = path.join(tempDir, repository.alias);
-				console.log('Проверяем существование репозитория', repositoryPath);
-				if (!fs.existsSync(repositoryPath)) {
-					needInit = true;
-				}
-			}
-
-			console.log('Загружаем данные о ветках. Необходимость инициализации: ', needInit);
-			// Если репозитории не загружены
-			if (needInit) {
-				initAll().done(function () {
-					initDeferred.resolve(null);
-				});
-			}
-			// Если загружены
-			else {
-				initDeferred.resolve(null);
-			}
-
-			initDeferred.promise.done(function () {
+			initAllIfNeeded().done(function () {
 				// Загружаем данные о ветках
 				getReposDataInner().done(function (data) {
 					console.log('Получили данные репозиториев');
@@ -76,6 +259,7 @@ var helper = helper || (function () {
 					asyncs2 = [],
 					data = {}; // Здесь будут храниться данные о репозиториях
 					/*
+					Пример структуры данных:
 					data = {
 						repo1: {
 							branches: ['70', ...],
@@ -99,22 +283,6 @@ var helper = helper || (function () {
 					*/
 
 				/**
-				 * Обновляет указанный репозиторий
-				 * @param repository Репозиторий
-				 * @returns {Q.Promise<null>}
-				 */
-				function updateRepo(repository) {
-					var repositoryPath = path.join(tempDir, repository.alias),
-						deferred = Q.defer();
-					console.log('Обновляем репозиторий «' + repository.alias + '»');
-					exec('hg update -R ' + repositoryPath)
-						.done(function () {
-							deferred.resolve(null);
-						});
-					return deferred.promise;
-				}
-
-				/**
 				 * Достаёт данные о ветках для указанного репозитория
 				 * @param repository Репозиторий
 				 * @returns {Q.Promise<null>}
@@ -136,7 +304,7 @@ var helper = helper || (function () {
 								};
 							}
 							// Добавляем ветки
-							while ((res = rx.exec(out)) !== null) {
+							while ((res = rx.exec(out[0])) !== null) {
 								data[repository.alias].branches.push(res[1]);
 								data[repository.alias].branchesMetadata[res[1]] = {
 									name: res[1]
@@ -173,7 +341,7 @@ var helper = helper || (function () {
 								};
 							}
 							// Добавляем ревизии
-							while ((res = rx.exec(out)) !== null) {
+							while ((res = rx.exec(out[0])) !== null) {
 								data[repository.alias].revisions.push({
 									rev: res[1],
 									branch: res[2],
@@ -192,7 +360,7 @@ var helper = helper || (function () {
 				for (i = 0; i < settings.repositories.length; i++) {
 					var repository = settings.repositories[i];
 					// Предварительно обновим репозитории
-					asyncs0.push(updateRepo(repository));
+					asyncs0.push(updateRepo(repository, tempDir));
 					// Создаём стек функций, которые достанут данные о ветках репозитория
 					asyncs1.push(getBranches(repository));
 					// Создаём стек функций, которые достанут данные о ревизиях
@@ -208,6 +376,81 @@ var helper = helper || (function () {
 				return deferred.promise;
 			}
 
+		});
+		return deferred.promise;
+	}
+
+	/**
+	 * Обновляет все репозитории
+	 * @returns {Q.Promise<null>}
+	 */
+	function updateAll() {
+		var deferred = Q.defer();
+		readFile('data/settings.json', 'utf8').done(function (data) {
+			var settings = JSON.parse(data),
+				tempDir = settings.temp,
+				asyncs = [];
+			settings.repositories.forEach(function (repo) {
+				asyncs.push(updateRepo(repo, tempDir));
+			});
+			Q.all(asyncs).done(function () {
+				deferred.resolve(null);
+			});
+		});
+		return deferred.promise;
+	}
+
+	/**
+	 * Обновляет указанный репозиторий
+	 * @param repository Репозиторий
+	 * @param tempDir Временная директория
+	 * @returns {Q.Promise<null>}
+	 */
+	function updateRepo(repository, tempDir) {
+		var repositoryPath = path.join(tempDir, repository.alias),
+			deferred = Q.defer();
+		console.log('Затягиваем изменения репозитория «' + repository.alias + '»');
+		exec('hg pull --force -R ' + repositoryPath)
+			.then(function () {
+				console.log('Обновляем репозиторий «' + repository.alias + '»');
+				return exec('hg update --clean -R ' + repositoryPath);
+			})
+			.done(function () {
+				deferred.resolve(null);
+			});
+		return deferred.promise;
+	}
+
+	/**
+	 * Инициализирует репозитории при необходимости
+	 * @returns {Q.Promise<null>}
+	 */
+	function initAllIfNeeded() {
+		var deferred = Q.defer();
+		readFile('data/settings.json', 'utf8').done(function (data) {
+			var settings = JSON.parse(data),
+				tempDir = settings.temp,
+				i, needInit = false;
+			console.log('Проверяем, загружены ли репозитории');
+			for (i = 0; i < settings.repositories.length; i++) {
+				var repository = settings.repositories[i],
+					repositoryPath = path.join(tempDir, repository.alias);
+				console.log('Проверяем существование репозитория', repositoryPath);
+				if (!fs.existsSync(repositoryPath)) {
+					needInit = true;
+				}
+			}
+			console.log('Загружаем данные о ветках. Необходимость инициализации: ', needInit);
+			// Если репозитории не загружены
+			if (needInit) {
+				initAll().done(function () {
+					deferred.resolve(null);
+				});
+			}
+			// Если загружены
+			else {
+				deferred.resolve(null);
+			}
 		});
 		return deferred.promise;
 	}
@@ -237,7 +480,9 @@ var helper = helper || (function () {
 				// Создаём временную директорию репозитория
 				console.log('Создаём директорию для «' + repository.alias + '»');
 				exec('rm -rf ' + repositoryPath)
-					.then(exec('mkdir -p ' + repositoryPath))
+					.then(function () {
+						return exec('mkdir -p ' + repositoryPath);
+					})
 					// Клонируем репозиторий
 					.then(function () {
 						console.log('Клонируем репозиторий «' + repository.alias + '»');
@@ -261,7 +506,9 @@ var helper = helper || (function () {
 				var deferred = Q.defer();
 				console.log('Создаём директорию для svn');
 				exec('rm -rf ' + svnDir)
-					.then(exec('mkdir -p ' + svnDir))
+					.then(function () {
+						return exec('mkdir -p ' + svnDir);
+					})
 					.then(function () {
 						console.log('Загружаем svn');
 						return exec('svn co ' + settings.svn + ' ' + svnDir);
@@ -296,8 +543,13 @@ var helper = helper || (function () {
 
 	return {
 		initAll: initAll,
+		initAllIfNeeded: initAllIfNeeded,
 		getReposData: getReposData,
-		getSettings: getSettings
+		getSettings: getSettings,
+		updateAll: updateAll,
+		createRepoDiff: createRepoDiff,
+		createArchive: createArchive,
+		cleanFilesTempDir: cleanFilesTempDir
 	};
 
 })();

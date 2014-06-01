@@ -6,19 +6,14 @@ module.exports = function (grunt) {
 
 	// Настраиваем grunt
 	grunt.initConfig({
-		// Настройки сервера
-		express:          {
+		// Настройки отладочного сервера
+		express: {
 			options: {
 				delay: 1000
 			},
-			prod: {
-				options: {
-					script: 'bin/server'
-				}
-			},
 			dev: {
 				options: {
-					script: 'bin/server',
+					script: 'bin/server-debug',
 					opts: ['--debug']
 				}
 			}
@@ -34,17 +29,28 @@ module.exports = function (grunt) {
 			}
 		},
 		// Настройки для запуска отладчика
-		external_daemon: {
+		'external_daemon': {
 			nodeInspector: {
 				options: {
 					verbose: true
 				},
-				cmd: 'node-inspector'
+				cmd: 'node-inspector',
+				args: ['--web-port=8181']
 			}
 		},
 		// Настройки анализатора кода
 		jshint: {
-			all: ['Gruntfile.js', 'app.js', 'controllers/**/*.js', 'public/**/*.js', 'bin/**/server']
+			all: ['Gruntfile.js', 'app.js', 'controllers/**/*.js', 'public/**/*.js', 'bin/**/server-debug']
+		},
+		// Настройки запуска продакшн-сервера
+		forever: {
+			prod: {
+				options: {
+					index: 'bin/server-prod',
+					command: 'node',
+					logDir: 'logs'
+				}
+			}
 		}
 	});
 
@@ -53,6 +59,7 @@ module.exports = function (grunt) {
 	grunt.loadNpmTasks('grunt-contrib-watch');
 	grunt.loadNpmTasks('grunt-external-daemon');
 	grunt.loadNpmTasks('grunt-contrib-jshint');
+	grunt.loadNpmTasks('grunt-forever');
 
 	// Задача, запускающая отладочный стек
 	// 1. Весь js-код проверяется с помощью jshint. Если есть ошибки, запуск прерывается.
@@ -63,12 +70,16 @@ module.exports = function (grunt) {
 
 	// Задача, запускающая веб сервер в режиме «продакшн»
 	// Весь js-код проверяется с помощью jshint. Если есть ошибки, запуск прерывается.
-	grunt.registerTask('start', ['jshint', 'express:prod']);
+	grunt.registerTask('start', ['jshint', 'forever:prod:start']);
+
+	// Задача для остановки сервера
+	grunt.registerTask('stop', ['forever:prod:stop']);
 
 	// Задача «по умолчанию» ничего не делает, а просто выводит справку по командам
 	grunt.registerTask('default', function () {
 		grunt.log.writeln();
 		grunt.log.ok('Наберите "' + 'grunt start'.yellow + '", чтобы запустить приложение.');
+		grunt.log.ok('Наберите "' + 'grunt stop'.yellow + '", чтобы остановить приложение.');
 		grunt.log.ok('Наберите "' + 'grunt start-dev'.yellow + '", чтобы запустить приложение в режиме отладки.');
 	});
 };
