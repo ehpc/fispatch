@@ -31,21 +31,37 @@ router
 			})
 			.done(function () {
 				var asyncs = [];
+
+				// Для каждого репозитория
+				data.patchData.repos.forEach(function (repo) {
+					console.log('Собираем репозиторий «' + repo.alias + '»');
+					console.log('Настройки для репозитория «' + repo.alias + '»:', repo);
+					// Создаём патч для репозитория
+					asyncs.push(helper.createRepoDiff(repo));
+				});
+
 				// Если сборка патча в SVN
 				if (data.type === 'patch_svn') {
 					console.log('Сборка патча для SVN');
-					// TODO:
+
+					Q.all(asyncs)
+						.then(function () {
+							// Заливаем в SVN
+							return helper.pushToSvn(data.patchData.name);
+						})
+						.done(function (date) {
+							console.log('Патч «' + data.patchData.name + '» добавлен в SVN');
+							// Отдаём информацию на интерфейс
+							res.json({
+								name: data.patchData.name,
+								status: 'ok',
+								date: date
+							});
+						});
 				}
 				// Если сборка патча с загрузкой
 				else if (data.type === 'patch_download') {
 					console.log('Сборка патча для загрузки');
-					// Для каждого репозитория
-					data.patchData.repos.forEach(function (repo) {
-						console.log('Собираем репозиторий «' + repo.alias + '»');
-						console.log('Настройки для репозитория «' + repo.alias + '»:', repo);
-						// Создаём патч для репозитория
-						asyncs.push(helper.createRepoDiff(repo));
-					});
 					Q.all(asyncs)
 						.then(function () {
 							// Создаём архив патча
@@ -60,16 +76,6 @@ router
 								url: '/shared/' + archName
 							});
 						});
-				}
-				// Если сборка дистрибутива в SVN
-				else if (data.type === 'distrib_svn') {
-					console.log('Сборка дистрибутива для SVN');
-					// TODO:
-				}
-				// Если сборка дистрибутива с загрузкой
-				else if (data.type === 'distrib_download') {
-					console.log('Сборка дистрибутива для загрузки');
-					// TODO:
 				}
 			});
 	})

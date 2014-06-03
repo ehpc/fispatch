@@ -12,7 +12,7 @@
 	 * @param action Тип действия
 	 * @returns {Object|null} Объект или null, если выбраны неверные значения
 	 */
-	function getSelectedData(action) {
+	function getSelectedData() {
 		/*
 		Пример возвращаемых данных:
 		{
@@ -47,15 +47,17 @@
 		$checkedRepos.each(function () {
 			var $row = $(this).closest('.repoRow'),
 				alias = $(this).val(),
-				branch = $row.find('.formBranch').val(),
-				startRev = $row.find('.formStartRev').val(),
-				endRev = $row.find('.formEndRev').val();
+				branch = $row.find('select.formBranch').val(),
+				startRev = $row.find('select.formStartRev').val(),
+				endRev = $row.find('select.formEndRev').val(),
+				isDistrib = $row.find('.isDistrib').is(':checked');
 			// Если сборка для всей ветки
 			if (branch) {
 				data.repos.push({
 					alias: alias,
 					type: 'branch',
-					branch: branch
+					branch: branch,
+					distrib: isDistrib
 				});
 			}
 			// Если сборка по диапазону ревизий
@@ -63,8 +65,9 @@
 				data.repos.push({
 					alias: alias,
 					type: 'rev',
-					startRev: startRev,
-					endRev: endRev
+					startRev: startRev.split(';')[1],
+					endRev: endRev.split(';')[0],
+					distrib: isDistrib
 				});
 			}
 			// Если ничего не выбрано
@@ -91,7 +94,7 @@
 				waitingDialog.show('Собираем патч...');
 				mainController.makePatch('patch_svn', data).done(function (res) {
 					waitingDialog.hide();
-					info('Патч «' + res.name + '» успешно собран.');
+					info('Патч «' + res.name + '» успешно собран [' + res.date + '].');
 				});
 			}
 		});
@@ -104,30 +107,6 @@
 				mainController.makePatch('patch_download', data).done(function (res) {
 					waitingDialog.hide();
 					info('Патч «' + res.name + '» доступен по ссылке: <a href="' + res.url + '">' + res.url + '</a>');
-				});
-			}
-		});
-
-		// Кнопка сборки дистрибутива и залития в svn
-		$('#buttonDistribSvn').on('click', function () {
-			var data = getSelectedData('distrib_svn');
-			if (data) {
-				waitingDialog.show('Собираем дистрибутив...');
-				mainController.makePatch('distrib_svn', data).done(function (res) {
-					waitingDialog.hide();
-					info('Дистрибутив «' + res.name + '» успешно собран.');
-				});
-			}
-		});
-
-		// Кнопка сборки дистрибутива и скачивания архива
-		$('#buttonDistribDownload').on('click', function () {
-			var data = getSelectedData('distrib_download');
-			if (data) {
-				waitingDialog.show('Собираем дистрибутив...');
-				mainController.makePatch('distrib_download', data).done(function (res) {
-					waitingDialog.hide();
-					info('Дистрибутив «' + res.name + '» доступен по ссылке: <a href="' + res.url + '">' + res.url + '</a>');
 				});
 			}
 		});

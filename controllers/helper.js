@@ -10,6 +10,7 @@
  * @property temp
  * @property svn
  * @property alias
+ * @property svnWebDirName
  */
 var helper = helper || (function () {
 	'use strict';
@@ -37,25 +38,71 @@ var helper = helper || (function () {
 					// Если собираем ветку целиком
 					if (snapshotSettings.type === 'branch') {
 						console.log('Собираем ветку целиком для репозитория «' + snapshotSettings.alias + '»');
-						// Устанавливаем нужную ветку
-						switchBranch(repository, tempDir, snapshotSettings.branch)
-							.then(function () {
-								// Достаём ревизии ветки
-								return getBranchRevisions(repository, tempDir, snapshotSettings.branch);
-							})
-							.then(function (revs) {
-								console.log('Ревизии репозитория «' + snapshotSettings.alias + '»', revs);
-								console.log('Копируем изменённые файлы репозитория «' + snapshotSettings.alias + '»');
-								return copyChangesFilesToTemp(repository, tempDir, revs, filesTempDir);
-							})
-							.done(function () {
-								console.log('Скопировали изменённые файлы репозитория «' + snapshotSettings.alias + '» в директорию «' + filesTempDir + '»');
-								deferred.resolve();
-							});
+						// Сборка дистрибутива
+						if (snapshotSettings.distrib === 'true') {
+							console.log('Собираем дистрибутив');
+							// Устанавливаем нужную ветку
+							switchBranch(repository, tempDir, snapshotSettings.branch)
+								.then(function () {
+									// Копируем все файлы
+									return copyAllFilesToTemp(repository, tempDir, filesTempDir);
+								})
+								.done(function () {
+									console.log('Скопировали все файлы репозитория «' + snapshotSettings.alias + '» в директорию «' + filesTempDir + '»');
+									deferred.resolve(null);
+								});
+						}
+						// Сборка патча
+						else {
+							console.log('Собираем патч');
+							// Устанавливаем нужную ветку
+							switchBranch(repository, tempDir, snapshotSettings.branch)
+								.then(function () {
+									// Достаём ревизии ветки
+									return getBranchRevisions(repository, tempDir, snapshotSettings.branch);
+								})
+								.then(function (revs) {
+									console.log('Ревизии репозитория «' + snapshotSettings.alias + '»', revs);
+									console.log('Копируем изменённые файлы репозитория «' + snapshotSettings.alias + '»');
+									return copyChangesFilesToTemp(repository, tempDir, revs, filesTempDir);
+								})
+								.done(function () {
+									console.log('Скопировали изменённые файлы репозитория «' + snapshotSettings.alias + '» в директорию «' + filesTempDir + '»');
+									deferred.resolve(null);
+								});
+						}
 					}
 					// Если собираем диапазон ревизий
 					else if (snapshotSettings.type === 'rev') {
-						console.log('Собираем диапазон ревизий для репозитория «' + snapshotSettings.alias + '»');
+						console.log('Собираем по указанным ревизиям');
+						// Сборка дистрибутива
+						if (snapshotSettings.distrib === 'true') {
+							console.log('Собираем дистрибутив');
+							// Устанавливаем нужную ветку
+							switchBranch(repository, tempDir, snapshotSettings.endRev)
+								.then(function () {
+									// Копируем все файлы
+									return copyAllFilesToTemp(repository, tempDir, filesTempDir);
+								})
+								.done(function () {
+									console.log('Скопировали все файлы репозитория «' + snapshotSettings.alias + '» в директорию «' + filesTempDir + '»');
+									deferred.resolve(null);
+								});
+						}
+						// Сборка патча
+						else {
+							// Устанавливаем нужную ревизию
+							updateToRevision(repository, tempDir, snapshotSettings.endRev)
+								.then(function () {
+									console.log('Собираем диапазон ревизий для репозитория «' + snapshotSettings.alias + '»');
+									console.log('Копируем изменённые файлы репозитория «' + snapshotSettings.alias + '»');
+									return copyChangesFilesToTemp(repository, tempDir, snapshotSettings, filesTempDir);
+								})
+								.done(function () {
+									console.log('Скопировали изменённые файлы репозитория «' + snapshotSettings.alias + '» в директорию «' + filesTempDir + '»');
+									deferred.resolve(null);
+								});
+						}
 					}
 					else {
 						console.log('Неверный формат сборки репозитория «' + snapshotSettings.alias + '»');
@@ -86,6 +133,136 @@ var helper = helper || (function () {
 	}
 
 	/**
+	 * Очищает SVN-репозиторий от незакоммиченных файлов
+	 * @returns {Q.Promise<null>}
+	 */
+	function cleanupSvn() {
+		var deferred = Q.defer();
+		readFile('data/settings.json', 'utf8').done(function (data) {
+			var settings = JSON.parse(data),
+				tempDir = settings.temp,
+				svnDir = path.join(tempDir, 'svn');
+			console.log('Очищаем SVN');
+			exec('cd ' + svnDir + " && svn st | grep '^?' | awk '{print $2}' | xargs rm -rf")
+				.done(function () {
+					deferred.resolve(null);
+				});
+		});
+		return deferred.promise;
+	}
+
+	/**
+	 * Обновляет репозиторий SVN
+	 * @returns {Q.Promise<null>}
+	 */
+	function updateSvn() {
+		var deferred = Q.defer();
+		readFile('data/settings.json', 'utf8').done(function (data) {
+			var settings = JSON.parse(data),
+				tempDir = settings.temp,
+				svnDir = path.join(tempDir, 'svn');
+			console.log('Обновляем SVN');
+			exec('cd ' + svnDir + " && svn update")
+				.done(function () {
+					deferred.resolve(null);
+				});
+		});
+		return deferred.promise;
+	}
+
+	/**
+	 * Тихий exec не прерывающий цепочки обещаний
+	 * @param cmd Команда
+	 * @returns {Q.Promise<Boolean>}
+	 */
+	function execQuiet(cmd) {
+		var deferred = Q.defer();
+		exec(cmd)
+			.fail(function () {
+				deferred.resolve(false);
+			})
+			.done(function () {
+				deferred.resolve(true);
+			});
+		return deferred.promise;
+	}
+
+	/**
+	 * Залить изменения в SVN
+	 * @param patchName Имя патча
+	 * @returns {Q.Promise<String>}
+	 */
+	function pushToSvn(patchName) {
+		var deferred = Q.defer();
+		readFile('data/settings.json', 'utf8').done(function (data) {
+			var settings = JSON.parse(data),
+				tempDir = settings.temp,
+				svnDir = path.join(tempDir, 'svn'),
+				svnCommitDir = path.join(svnDir, patchName, settings.svnWebDirName),
+				filesTempDirBase = path.join(tempDir, 'files_temp/'),
+				svnDate = '',
+				noDelete = false;
+			// Очищаем SVN
+			cleanupSvn()
+				// Обновляемся
+				.then(function () {
+					return updateSvn();
+				})
+				// Удаляем старую директорию, если есть
+				.then(function () {
+					console.log('Создаём директорию в SVN для записи патча');
+					return execQuiet('cd ' + svnDir + ' && svn delete --force ' + svnCommitDir);
+				})
+				.then(function (deleted) {
+					if (deleted) {
+						return exec('cd ' + svnDir + ' && svn commit -m "Удалили старую версию патча «' + patchName + '»"');
+					}
+					else {
+						noDelete = true;
+						return Q.fcall(function () {
+							return true;
+						});
+					}
+				})
+				// Создаём директорию, в которую пойдут файлы патча
+				.then(function () {
+					if (noDelete) {
+						return Q.fcall(function () {
+							return true;
+						});
+					}
+					else {
+						return exec('rm -rf "' + svnCommitDir + '"');
+					}
+				})
+				.then(function () {
+					return exec('mkdir -p "' + svnCommitDir + '"');
+				})
+				// Копируем файлы в директорию SVN
+				.then(function () {
+					console.log('Копируем патч в SVN');
+					return exec('cp -r ' + filesTempDirBase + '. ' + svnCommitDir);
+				})
+				// Добавляем всё под контроль репозитория
+				.then(function () {
+					return exec('cd ' + svnDir + ' && svn add --force .');
+				})
+				// Коммитим изменения
+				.then(function () {
+					console.log('Делаем коммит в SVN');
+					svnDate = getDateTimeString();
+					return exec('cd ' + svnDir + ' && svn commit -m "Создаём патч «' +
+						patchName + '». Дата: ' + svnDate + '."');
+				})
+				.done(function () {
+					console.log('Изменения, вероятно, запушены в SVN');
+					deferred.resolve(svnDate);
+				});
+		});
+		return deferred.promise;
+	}
+
+	/**
 	 * Создаёт архив патча
 	 * @param patchName Название патча
 	 * @param downloadsDir Директория, в которую будет помещён архив
@@ -97,12 +274,39 @@ var helper = helper || (function () {
 			var settings = JSON.parse(data),
 				tempDir = settings.temp,
 				filesTempDirBase = path.join(tempDir, 'files_temp/'),
-				archName = Date.now() + '_' + patchName + '.tar.gz',
+				archName = getDateTimeString() + '_' + patchName + '.tar.gz',
 				archFullName = path.join(downloadsDir, archName);
 			exec('tar -czf "' + archFullName + '" -C "' + filesTempDirBase + '" .').done(function () {
 				deferred.resolve(archName);
 			});
 		});
+		return deferred.promise;
+	}
+
+	/**
+	 * Копирует все файлы репозитория во временную директорию
+	 * @param repository Репозиторий
+	 * @param tempDir Временная диреткория
+	 * @param filesTempDir Временная директория назначения
+	 * @returns {Q.Promise<null>}
+	 */
+	function copyAllFilesToTemp(repository, tempDir, filesTempDir) {
+		var deferred = Q.defer(),
+			repositoryPath = path.join(tempDir, repository.alias);
+		// Создаём временную директорию
+		exec('rm -rf ' + filesTempDir)
+			.then(function () {
+				return exec('mkdir -p ' + filesTempDir);
+			})
+			.then(function () {
+				console.log('Создали временную директорию «' + filesTempDir + '»');
+				// Копируем файлы
+				return exec('rsync -a --exclude=\'.hg\' ' + repositoryPath + '/. ' + filesTempDir);
+
+			})
+			.done(function () {
+				deferred.resolve(null);
+			});
 		return deferred.promise;
 	}
 
@@ -146,7 +350,7 @@ var helper = helper || (function () {
 				});
 			})
 			.done(function () {
-				deferred.resolve();
+				deferred.resolve(null);
 			});
 		return deferred.promise;
 	}
@@ -223,6 +427,24 @@ var helper = helper || (function () {
 			deferred = Q.defer();
 		console.log('Меняем ветку репозитория «' + repository.alias + '» на «' + branch + '»');
 		exec('hg update --clean "' + branch + '" -R ' + repositoryPath)
+			.done(function () {
+				deferred.resolve(null);
+			});
+		return deferred.promise;
+	}
+
+	/**
+	 * Делаем активной указанную ревизию
+	 * @param repository Репозиторий
+	 * @param tempDir Временная директория
+	 * @param revision Ревизия
+	 * @returns {Q.Promise<null>}
+	 */
+	function updateToRevision(repository, tempDir, revision) {
+		var repositoryPath = path.join(tempDir, repository.alias),
+			deferred = Q.defer();
+		console.log('Меняем текущую ревизию репозитория «' + repository.alias + '» на «' + revision + '»');
+		exec('hg update --clean -r "' + revision + '" -R ' + repositoryPath)
 			.done(function () {
 				deferred.resolve(null);
 			});
@@ -541,6 +763,22 @@ var helper = helper || (function () {
 		return deferred.promise;
 	}
 
+	/**
+	 * Возвращает текущую дату в формате «Y.m.d.h.m.s»
+	 * @returns {string} Дата в виде строки
+	 */
+	function getDateTimeString() {
+		function pad(num, size) {
+			var s = "000000000" + num;
+			return s.substr(s.length-size);
+		}
+		var date = new Date(),
+			res = '';
+		res += date.getFullYear() + '.' + pad(date.getMonth() + 1, 2) + '.' + pad(date.getDate(), 2) + '.' +
+				pad(date.getHours(), 2) + '.' + pad(date.getMinutes(), 2) + '.' + pad(date.getSeconds(), 2);
+		return res;
+	}
+
 	return {
 		initAll: initAll,
 		initAllIfNeeded: initAllIfNeeded,
@@ -549,7 +787,8 @@ var helper = helper || (function () {
 		updateAll: updateAll,
 		createRepoDiff: createRepoDiff,
 		createArchive: createArchive,
-		cleanFilesTempDir: cleanFilesTempDir
+		cleanFilesTempDir: cleanFilesTempDir,
+		pushToSvn: pushToSvn
 	};
 
 })();

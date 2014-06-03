@@ -10,5 +10,6 @@
 		}
 	],
 	"temp": "/home/ehpc/test/temp/",
-	"svn": "file:///home/ehpc/test/test_data/svn_repo/DISTR"
+	"svn": "file:///home/ehpc/test/test_data/svn_repo/DISTR",
+	"svnWebDirName": "web"
 }
