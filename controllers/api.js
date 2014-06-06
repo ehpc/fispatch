@@ -23,10 +23,12 @@ router
 		// Инициализируем все репозитории по необходимости
 		helper.initAllIfNeeded()
 			.then(function () {
+				console.log('API updateAll');
 				// Обновляем все репозитории
 				return helper.updateAll();
 			})
 			.then(function () {
+				console.log('API cleanFilesTempDir');
 				return helper.cleanFilesTempDir();
 			})
 			.done(function () {
@@ -64,6 +66,7 @@ router
 					console.log('Сборка патча для загрузки');
 					Q.all(asyncs)
 						.then(function () {
+							console.log('Создаем архив');
 							// Создаём архив патча
 							return helper.createArchive(data.patchData.name, downloadsDir);
 						})

@@ -1,15 +1,11 @@
 {
 	"repositories": [
 		{
-			"address": "file:///home/ehpc/test/test_data/mercurial",
-			"alias": "myrepo"
-		},
-		{
-			"address": "file:///home/ehpc/test/test_data/mercurial",
-			"alias": "myrepo2"
+			"address": "http://mercurial.fisgroup.ru/fcs/akbarsweb/",
+			"alias": "fcs"
 		}
 	],
-	"temp": "/home/ehpc/test/temp/",
-	"svn": "file:///home/ehpc/test/test_data/svn_repo/DISTR",
+	"temp": "/srv/www/temp",
+	"svn": "svn://svn/satc.dev/FCS/Patches/DISTRIBUTION",
 	"svnWebDirName": "web"
 }
