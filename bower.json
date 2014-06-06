@@ -1,0 +1,16 @@
+{
+  "name": "fispatch",
+  "version": "0.0.0",
+  "homepage": "https://github.com/ehpc/fispatch",
+  "authors": [
+    "ehpc <ehpc@em42.ru>"
+  ],
+  "moduleType": [
+    "node"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "bootstrap-select": "~1.5.2",
+    "bootstrap": "~3.1.1"
+  }
+}
