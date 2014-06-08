@@ -29,3 +29,4 @@ node_modules
 bower_components
 downloads
 public/js/bootstrap-waitingfor
+data/settings.json

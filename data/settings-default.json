@@ -2,10 +2,13 @@
     "repositories": [
         {
             "address": "http://mercurial.fisgroup.ru/fcs/akbarsweb/",
-            "alias": "fcs"
+            "alias": "fcs",
+			"cloneRev": "4162"
         }
     ],
     "temp": "/srv/www/temp",
     "svn": "svn://svn/satc.dev/FCS/Patches/DISTRIBUTION",
-    "svnWebDirName": "web"
+    "svnWebDirName": "web",
+	"hgCommand": "/root/bin/hg",
+	"processMaxBuffer": 5000000
 }
