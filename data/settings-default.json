@@ -3,7 +3,8 @@
         {
             "address": "http://mercurial.fisgroup.ru/fcs/akbarsweb/",
             "alias": "fcs",
-            "cloneRev": "4162"
+            "cloneRev": "4162",
+            "revisionsLimit": 50
         }
     ],
     "temp": "/srv/www/temp",
