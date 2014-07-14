@@ -187,7 +187,7 @@ var helper = helper || (function () {
 				tempDir = settings.temp,
 				svnDir = path.join(tempDir, 'svn');
 			console.log('Обновляем SVN');
-			exec('cd ' + svnDir + " && svn update", execOptions)
+			exec('cd ' + svnDir + " && svn cleanup && svn update", execOptions)
 				.done(function () {
 					deferred.resolve(null);
 				});
@@ -462,7 +462,7 @@ var helper = helper || (function () {
 	function switchBranch(repository, tempDir, branch) {
 		var repositoryPath = path.join(tempDir, repository.alias),
 			deferred = Q.defer();
-		console.log('Меняем ветку репозитория «' + repository.alias + '» на «' + branch + '»');
+		console.log('Меняем ветку репозитория «' + repository.alias + '» на «' + branch + '»', hgCommand + ' update --clean "' + branch + '" -R ' + repositoryPath);
 		exec(hgCommand + ' update --clean "' + branch + '" -R ' + repositoryPath, execOptions)
 			.done(function () {
 				deferred.resolve(null);
@@ -770,7 +770,7 @@ var helper = helper || (function () {
 			}
 
 			// Инициализируем svn
-			asyncs.push(function () {
+			/*asyncs.push(function () {
 				var deferred = Q.defer();
 				console.log('Создаём директорию для svn');
 				exec('rm -rf ' + svnDir, execOptions)
@@ -786,7 +786,7 @@ var helper = helper || (function () {
 						deferred.resolve(null);
 					});
 				return deferred.promise;
-			}());
+			}());*/
 
 			// Выполняем всё асинхронно
 			Q.all(asyncs).done(function () {
