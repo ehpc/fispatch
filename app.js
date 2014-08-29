@@ -10,6 +10,18 @@ var express = require('express'); // Веб сервер express
 var path = require('path'); // Модуль работы с путями
 var logger = require('morgan'); // Логирование для express
 var bodyParser = require('body-parser'); // Для работы с POST-запросами
+var fs = require('fs');
+
+console.log = function () {
+	var currentdate = new Date(),
+		timestamp = currentdate.getDate() + "." +
+                (currentdate.getMonth() + 1)  + "." +
+                currentdate.getFullYear() + " " +
+                currentdate.getHours() + ":" +
+                currentdate.getMinutes() + ":" +
+                currentdate.getSeconds();
+	fs.appendFile('logs/console.log', '[' + timestamp + '] ' + Array.prototype.slice.call(arguments).join(' ') + '\n');
+};
 
 // Создаём наше серверное приложение
 var app = express();

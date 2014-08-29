@@ -39,7 +39,7 @@ router
 					console.log('Собираем репозиторий «' + repo.alias + '»');
 					console.log('Настройки для репозитория «' + repo.alias + '»:', repo);
 					// Создаём патч для репозитория
-					asyncs.push(helper.createRepoDiff(repo));
+					asyncs.push(helper.createRepoDiff(repo, data.patchData.name));
 				});
 
 				// Если сборка патча в SVN

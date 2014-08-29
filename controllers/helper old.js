@@ -43,7 +43,7 @@ var helper = helper || (function () {
 	 * @param snapshotSettings Настройки сборки
 	 * @returns {Q.Promise<null>}
 	 */
-	function createRepoDiff(snapshotSettings, patchName) {
+	function createRepoDiff(snapshotSettings) {
 		var deferred = Q.defer();
 		console.log('Создаём патч для репозитория «' + snapshotSettings.alias + '»');
 		readFile('data/settings.json', 'utf8').done(function (data) {
@@ -71,7 +71,7 @@ var helper = helper || (function () {
 								.then(function (revs) {
 									console.log('Ревизии репозитория «' + snapshotSettings.alias + '»', revs);
 									console.log('Копируем изменённые файлы репозитория «' + snapshotSettings.alias + '»');
-									return copyChangesFilesToTemp(repository, tempDir, revs, path.join(filesTempDirBase, 'patch', snapshotSettings.alias), patchName);
+									return copyChangesFilesToTemp(repository, tempDir, revs, path.join(filesTempDirBase, 'patch', snapshotSettings.alias));
 								})
 								.done(function () {
 									console.log('Скопировали изменённые файлы репозитория «' + snapshotSettings.alias + '»');
@@ -90,7 +90,7 @@ var helper = helper || (function () {
 								.then(function () {
 									console.log('Собираем диапазон ревизий для репозитория «' + snapshotSettings.alias + '»');
 									console.log('Копируем изменённые файлы репозитория «' + snapshotSettings.alias + '»');
-									return copyChangesFilesToTemp(repository, tempDir, snapshotSettings, path.join(filesTempDirBase, 'patch', snapshotSettings.alias), patchName);
+									return copyChangesFilesToTemp(repository, tempDir, snapshotSettings, path.join(filesTempDirBase, 'patch', snapshotSettings.alias));
 								})
 								.done(function () {
 									console.log('Скопировали изменённые файлы репозитория «' + snapshotSettings.alias + '»');
@@ -187,7 +187,7 @@ var helper = helper || (function () {
 				tempDir = settings.temp,
 				svnDir = path.join(tempDir, 'svn');
 			console.log('Обновляем SVN');
-			exec('cd ' + svnDir + " && svn cleanup && svn update", execOptions)
+			exec('cd ' + svnDir + " && svn revert --recursive . svn update", execOptions)
 				.done(function () {
 					deferred.resolve(null);
 				});
@@ -277,7 +277,7 @@ var helper = helper || (function () {
 					console.log('Делаем коммит в SVN');
 					svnDate = getDateTimeString();
 					return exec('cd ' + svnDir + ' && svn commit -m "Создаём патч «' +
-						patchName + '». Дата: ' + svnDate + '."', execOptions);
+						patchName + '». Дата: ' + svnDate + '." && svn cleanup', execOptions);
 				})
 				.done(function () {
 					console.log('Изменения, вероятно, запушены в SVN');
@@ -346,13 +346,12 @@ var helper = helper || (function () {
 	 * @param filesTempDir Временная директория назначения
 	 * @returns {Q.Promise<null>}
 	 */
-	function copyChangesFilesToTemp(repository, tempDir, revs, filesTempDir, patchName) {
+	function copyChangesFilesToTemp(repository, tempDir, revs, filesTempDir) {
 		var deferred = Q.defer(),
 			changedFiles = [],
 			repositoryPath = path.join(tempDir, repository.alias),
 			asyncs1 = [],
-			asyncs2 = [],
-			stat = '';
+			asyncs2 = [];
 		// Получаем изменённые файлы
 		getChangedFiles(repository, tempDir, revs.startRev, revs.endRev)
 			.then(function (files) {
@@ -375,7 +374,6 @@ var helper = helper || (function () {
 						destDir = path.dirname(path.join(filesTempDir, file));
 					asyncs1Cmd += 'mkdir -p "' + destDir + '"; ';
 					asyncs2Cmd += 'cp "' + source + '" "' + dest + '"; ';
-					stat += file + '$"\n" ';
 				});
 				asyncs1.push(exec(asyncs1Cmd, execOptions));
 				asyncs2.push(exec(asyncs2Cmd, execOptions));
@@ -383,16 +381,8 @@ var helper = helper || (function () {
 				return Q.all(asyncs1);
 			})
 			.then(function () {
-				console.log('Создали структуру директорий, копируем файлы');
-				return Q.all(asyncs2);
-			})
-			.then(function () {
-				console.log('Пишем статистику в version.txt');
-				return exec(
-							'echo patchName: ' + patchName + '$"\n"end revision: ' + revs.endRev + '$"\n"' +
-							'-------------- Changed files-----------------$"\n" ' +
-							stat + '----------------------------- > ' +  filesTempDir + '/version.txt', execOptions
-						);
+					console.log('Создали структуру директорий, копируем файлы');
+					return Q.all(asyncs2);
 			})
 			.done(function () {
 				console.log('Завершили копирование файлов');
