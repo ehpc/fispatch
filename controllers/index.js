@@ -13,6 +13,7 @@ var router = require('express').Router(),
 router.get('/', function (req, res) {
 	// Подгружаем данные репозиториев
 	Q.all([helper.getReposData(), helper.getSettings()]).done(function (data) {
+		console.log('>>>/done');
 		// Рендерим интерфейс
 		res.render('index', {
 			reposData: data[0],

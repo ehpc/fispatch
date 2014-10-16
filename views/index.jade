@@ -50,9 +50,9 @@ block content
 								option(value='') Выберите конечную ревизию
 								each revision in repoData.revisions
 									option(value="#{revision.node};#{revision.parent1}", style="background: #{revision.color};") [#{revision.branch}] #{revision.rev} #{revision.desc}
-				.row.mt15
-					.col-md-12
-						button#buttonPatchSvn.btn.btn-success.btn-block(type="button") Собрать патч и залить в SVN
+				//.row.mt15
+				//	.col-md-12
+				//		button#buttonPatchSvn.btn.btn-success.btn-block(type="button") Собрать патч и залить в SVN
 				.row.mt15
 					.col-md-12
 						button#buttonPatchDownload.btn.btn-primary.btn-block(type="button") Собрать патч и скачать архив

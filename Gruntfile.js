@@ -74,6 +74,8 @@ module.exports = function (grunt) {
 
 	// Задача для остановки сервера
 	grunt.registerTask('stop', ['forever:prod:stop']);
+	
+	grunt.registerTask('restart', ['forever:prod:stop', 'jshint', 'forever:prod:start']);
 
 	// Задача «по умолчанию» ничего не делает, а просто выводит справку по командам
 	grunt.registerTask('default', function () {

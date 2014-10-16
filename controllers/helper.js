@@ -358,6 +358,7 @@ var helper = helper || (function () {
 			.then(function (files) {
 				console.log('Изменённые файлы репозитория «' + repository.alias + '»', files.length, 'штук');
 				changedFiles = files;
+				fs.writeFileSync('logs/changed_files.txt', files.join('\n'));
 				// Создаём временную директорию
 				return exec('rm -rf ' + filesTempDir, execOptions);
 			})
@@ -370,8 +371,8 @@ var helper = helper || (function () {
 					asyncs2Cmd = '';
 				// Копируем файлы, создавая необходимые директории
 				changedFiles.forEach(function (file) {
-					var source = path.join(repositoryPath, file),
-						dest = path.join(filesTempDir, file),
+					var source = path.join(repositoryPath, file).replace('$', '\\$'),
+						dest = path.join(filesTempDir, file).replace('$', '\\$'),
 						destDir = path.dirname(path.join(filesTempDir, file));
 					asyncs1Cmd += 'mkdir -p "' + destDir + '"; ';
 					asyncs2Cmd += 'cp "' + source + '" "' + dest + '"; ';
@@ -412,7 +413,7 @@ var helper = helper || (function () {
 	function getChangedFiles(repository, tempDir,startRev, endRev) {
 		var repositoryPath = path.join(tempDir, repository.alias),
 			deferred = Q.defer();
-		console.log('Находим изменённые файлы для репозитория «' + repository.alias + '»');
+		console.log('Находим изменённые файлы для репозитория «' + repository.alias + '»', hgCommand + ' status -A --rev ' + startRev + ':' + endRev + ' -R ' + repositoryPath);
 		exec(hgCommand + ' status -A --rev ' + startRev + ':' + endRev + ' -R ' + repositoryPath, execOptions)
 			.done(function (out) {
 				// Команда вернула нам список файлов с их статусами в репозитории
@@ -429,6 +430,7 @@ var helper = helper || (function () {
 						}
 					}
 				});
+				fs.writeFileSync('logs/fileNames.txt', fileNames.join('\n'));
 				deferred.resolve(fileNames);
 			});
 		return deferred.promise;
