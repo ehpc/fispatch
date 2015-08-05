@@ -27,7 +27,7 @@ var helper = helper || (function () {
 		readFile = Q.denodeify(fs.readFile),
 		colorsModule = require('controllers/colors'),
 		execOptions = {
-			maxBuffer: 1000*1024
+			maxBuffer: 250000
 		},
 		hgCommand = 'hg';
 
@@ -36,6 +36,7 @@ var helper = helper || (function () {
 		var settings = JSON.parse(data);
 		hgCommand = settings.hgCommand;
 		execOptions.maxBuffer = settings.processMaxBuffer;
+		console.log('maxBuffer', execOptions.maxBuffer);
 	});
 
 	/**
@@ -352,6 +353,9 @@ var helper = helper || (function () {
 			repositoryPath = path.join(tempDir, repository.alias),
 			asyncs1 = [],
 			asyncs2 = [],
+			cmdParts = 10,
+			asyncs1Cmd = '',
+			asyncs2Cmds = [],
 			stat = '';
 		// Получаем изменённые файлы
 		getChangedFiles(repository, tempDir, revs.startRev, revs.endRev)
@@ -367,8 +371,7 @@ var helper = helper || (function () {
 			})
 			.then(function () {
 				console.log('Создали временную директорию «' + filesTempDir + '»');
-				var asyncs1Cmd = '',
-					asyncs2Cmd = '';
+				var deferred1 = Q.defer(), asyncs2Cmd = '';
 				// Копируем файлы, создавая необходимые директории
 				changedFiles.forEach(function (file) {
 					var source = path.join(repositoryPath, file).replace('$', '\\$'),
@@ -377,15 +380,41 @@ var helper = helper || (function () {
 					asyncs1Cmd += 'mkdir -p "' + destDir + '"; ';
 					asyncs2Cmd += 'cp "' + source + '" "' + dest + '"; ';
 					stat += file + '$"\n" ';
+					if (asyncs2Cmd.length > 100000) {
+						asyncs2Cmds.push(asyncs2Cmd);
+						asyncs2Cmd = '';
+					}
 				});
-				asyncs1.push(exec(asyncs1Cmd, execOptions));
-				asyncs2.push(exec(asyncs2Cmd, execOptions));
+				// Добавляем остатки
+				if (asyncs2Cmd) {
+					asyncs2Cmds.push(asyncs2Cmd);
+				}
+				fs.writeFileSync('logs/stat.txt', stat);
+				childProcess.exec(asyncs1Cmd, execOptions, function (error, stdout, stderr) {
+					console.log('asyncs1Cmd DONE');
+					fs.writeFileSync('logs/asyncs1Cmd.txt', asyncs1Cmd + '\n\n>>>\n' + error + '\n\n>>>\n' + stdout + '\n\n>>>\n' + stderr);
+					deferred1.resolve(true);
+				});
 				console.log('Создаём структуру директорий');
-				return Q.all(asyncs1);
+				return deferred1.promise;
 			})
 			.then(function () {
+				var defers = [], promises = [], i;
 				console.log('Создали структуру директорий, копируем файлы');
-				return Q.all(asyncs2);
+				console.log('Количество суб-процессов: ' + asyncs2Cmds.length);
+				function exeCbWrapper(defer, i) {
+					return function execCb(error, stdout, stderr) {
+						console.log('asyncs2Cmd' + i + ' DONE');
+						fs.writeFileSync('logs/asyncs2Cmd' + i + '.txt', asyncs2Cmds[i] + '\n\n>>>\n' + error + '\n\n>>>\n' + stdout + '\n\n>>>\n' + stderr);
+						defer.resolve(true);
+					};
+				}
+				for (i = 0; i < asyncs2Cmds.length; i++) {
+					defers[i] = Q.defer();
+					promises[i] = defers[i].promise;
+					childProcess.exec(asyncs2Cmds[i], execOptions, exeCbWrapper(defers[i], i));
+				}
+				return Q.all(promises);
 			})
 			.then(function () {
 				console.log('Пишем статистику в version.txt');
@@ -689,7 +718,7 @@ var helper = helper || (function () {
 	function updateRepo(repository, tempDir) {
 		var repositoryPath = path.join(tempDir, repository.alias),
 			deferred = Q.defer();
-		console.log('Затягиваем изменения репозитория «' + repository.alias + '»');
+		console.log('Затягиваем изменения репозитория «' + repository.alias + '»', hgCommand + ' pull --force -R ' + repositoryPath);
 		exec(hgCommand + ' pull --force -R ' + repositoryPath, execOptions)
 			.then(function () {
 				console.log('Обновляем репозиторий «' + repository.alias + '»', 'hg update --quiet --clean -R ' + repositoryPath);
@@ -765,7 +794,7 @@ var helper = helper || (function () {
 					})
 					// Клонируем репозиторий
 					.then(function () {
-						console.log('Клонируем репозиторий «' + repository.alias + '»', 'hg clone ' + repository.address + ' ' + repositoryPath);
+						console.log('Клонируем репозиторий «' + repository.alias + '»', hgCommand + ' clone -r ' + repository.cloneRev + ' ' + repository.address + ' ' + repositoryPath);
 						return exec(hgCommand + ' clone -r ' + repository.cloneRev + ' ' + repository.address + ' ' + repositoryPath, execOptions);
 					})
 					.done(function () {
