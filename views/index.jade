@@ -24,32 +24,33 @@ block content
 					.col-md-4
 						label Собрать диапазон ревизий
 				each repoData, repoName in reposData
-					.row.repoRow
-						.col-md-2
-							.checkbox
-								label
-									input.selectRepo(type="checkbox", value="#{repoName}")
-									span.repoName #{repoName}
-						.col-md-2
-							.checkbox
-								label
-									input.isDistrib(type="checkbox", value="distrib")
-									span Дистрибутив
-						.col-md-4
-							select.form-control.selectpicker.show-tick.formBranch(id="formBranch#{repoName}", data-live-search="true")
-								option(value='') Выберите ветку
-								each branch in repoData.branches
-									option(value="#{branch}", style="background: #{repoData.branchesMetadata[branch].color};") #{branch}
-						.col-md-2
-							select.form-control.selectpicker.show-tick.formStartRev(id="formStartRev#{repoName}", data-live-search="true")
-								option(value='') Выберите начальную ревизию
-								each revision in repoData.revisions
-									option(value="#{revision.node};#{revision.parent1}", style="background: #{revision.color};") [#{revision.branch}] #{revision.rev} #{revision.desc}
-						.col-md-2
-							select.form-control.selectpicker.show-tick.formEndRev(id="formEndRev#{repoName}", data-live-search="true")
-								option(value='') Выберите конечную ревизию
-								each revision in repoData.revisions
-									option(value="#{revision.node};#{revision.parent1}", style="background: #{revision.color};") [#{revision.branch}] #{revision.rev} #{revision.desc}
+					if !repoData.hidden
+						.row.repoRow
+							.col-md-2
+								.checkbox
+									label
+										input.selectRepo(type="checkbox", value="#{repoName}")
+										span.repoName #{repoName}
+							.col-md-2
+								.checkbox
+									label
+										input.isDistrib(type="checkbox", value="distrib")
+										span Дистрибутив
+							.col-md-4
+								select.form-control.selectpicker.show-tick.formBranch(id="formBranch#{repoName}", data-live-search="true")
+									option(value='') Выберите ветку
+									each branch in repoData.branches
+										option(value="#{branch}", style="background: #{repoData.branchesMetadata[branch].color};") #{branch}
+							.col-md-2
+								select.form-control.selectpicker.show-tick.formStartRev(id="formStartRev#{repoName}", data-live-search="true")
+									option(value='') Выберите начальную ревизию
+									each revision in repoData.revisions
+										option(value="#{revision.node};#{revision.parent1}", style="background: #{revision.color};") [#{revision.branch}] #{revision.rev} #{revision.desc}
+							.col-md-2
+								select.form-control.selectpicker.show-tick.formEndRev(id="formEndRev#{repoName}", data-live-search="true")
+									option(value='') Выберите конечную ревизию
+									each revision in repoData.revisions
+										option(value="#{revision.node};#{revision.parent1}", style="background: #{revision.color};") [#{revision.branch}] #{revision.rev} #{revision.desc}
 				//.row.mt15
 				//	.col-md-12
 				//		button#buttonPatchSvn.btn.btn-success.btn-block(type="button") Собрать патч и залить в SVN

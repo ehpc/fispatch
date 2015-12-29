@@ -1,1 +1,35 @@
-{"repositories":[{"address":"http://mercurial.fisgroup.ru/fcs/akbarsweb/","alias":"fcs","cloneRev":"4162","revisionsLimit":"50"},{"address":"http://mercurial.fisgroup.ru/fcs/colweb/","alias":"collectors","cloneRev":"210","revisionsLimit":"50"}],"temp":"/srv/www/temp","svn":"svn://svn/satc.dev/FCS/Patches/DISTRIBUTION","svnWebDirName":"web","hgCommand":"/root/bin/hg","processMaxBuffer":"5000000"}
+{
+	"repositories":
+	[
+		{
+			"address": "http://mercurial.fisgroup.ru/fcs/akbarsweb/",
+			"alias": "fcs",
+			"cloneRev": "4162",
+			"revisionsLimit": "50"
+		},
+		{
+			"address": "http://mercurial.fisgroup.ru/fcs/colweb/",
+			"alias": "collectors",
+			"cloneRev": "210",
+			"revisionsLimit": "50"
+		},
+		{
+			"address": "http://mercurial.fisgroup.ru/fcs/Server/Schemas_dev/",
+			"alias": "oracleSchemas",
+			"cloneRev": "0",
+			"revisionsLimit": "50"
+		},
+		{
+			"address": "http://mercurial.fisgroup.ru/fcs/Server/Scripts/",
+			"alias": "oracleScripts",
+			"cloneRev": "0",
+			"revisionsLimit": "50",
+			"hidden": true
+		}
+	],
+	"temp": "/srv/www/temp",
+	"svn": "svn://svn/satc.dev/FCS/Patches/DISTRIBUTION",
+	"svnWebDirName": "web",
+	"hgCommand": "/root/bin/hg",
+	"processMaxBuffer": "5000000"
+}

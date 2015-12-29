@@ -306,6 +306,7 @@ var helper = helper || (function () {
 				archFullName = path.join(downloadsDir, archName);
 			console.log('tar -czf "' + archFullName + '" -C "' + filesTempDirBase + '" .');
 			exec('tar -czf "' + archFullName + '" -C "' + filesTempDirBase + '" .', execOptions).done(function () {
+				console.log('tar закончен');
 				deferred.resolve(archName);
 			});
 		});
@@ -616,6 +617,7 @@ var helper = helper || (function () {
 							for (i = 0; i < data[repository.alias].branches.length; i++) {
 								data[repository.alias].branchesMetadata[data[repository.alias].branches[i]].color = colors[i];
 							}
+							console.log('<<<Получили список веток для репозитория «' + repository.alias + '»');
 							deferred.resolve(null);
 						});
 					return deferred.promise;
@@ -648,6 +650,10 @@ var helper = helper || (function () {
 								if (!branchName) {
 									branchName = 'default';
 								}
+								if (!data[repository.alias].branchesMetadata[branchName]) {
+									console.error('Нет данных для репозитория ' + repository.alias + ' и ветки ' + branchName);
+									console.error(JSON.stringify(data[repository.alias]));
+								}
 								data[repository.alias].revisions.push({
 									rev: res[1],
 									branch: branchName,
@@ -657,27 +663,38 @@ var helper = helper || (function () {
 									color: data[repository.alias].branchesMetadata[branchName].color
 								});
 							}
+							console.log('<<<Получили список ревизий для репозитория «' + repository.alias + '»');
 							deferred.resolve(null);
 						});
 					return deferred.promise;
 				}
 
 				// Проходимся по всем репозиториям
-				for (i = 0; i < settings.repositories.length; i++) {
-					var repository = settings.repositories[i];
-					// Предварительно обновим репозитории
-					asyncs0.push(updateRepo(repository, tempDir));
-					// Создаём стек функций, которые достанут данные о ветках репозитория
-					asyncs1.push(getBranches(repository));
-					// Создаём стек функций, которые достанут данные о ревизиях
-					asyncs2.push(getRevisions(repository));
-				}
 				console.log('updateRepo');
+				for (i = 0; i < settings.repositories.length; i++) {
+					// Предварительно обновим репозитории
+					asyncs0.push(updateRepo(settings.repositories[i], tempDir));
+				}
 				Q.all(asyncs0).done(function () {
 					console.log('getBranches');
+					for (i = 0; i < settings.repositories.length; i++) {
+						// Создаём стек функций, которые достанут данные о ветках репозитория
+						asyncs1.push(getBranches(settings.repositories[i]));
+					}
 					Q.all(asyncs1).done(function () {
 						console.log('getRevisions');
+						for (i = 0; i < settings.repositories.length; i++) {
+							// Создаём стек функций, которые достанут данные о ревизиях
+							asyncs2.push(getRevisions(settings.repositories[i]));
+						}
 						Q.all(asyncs2).done(function () {
+							// Сортируем репозитории и дополняем объекты данными
+							var ordered = {};
+							for (i = 0; i < settings.repositories.length; i++) {
+								ordered[settings.repositories[i].alias] = data[settings.repositories[i].alias];
+								ordered[settings.repositories[i].alias].hidden = settings.repositories[i].hidden;
+							}
+							data = ordered;
 							deferred.resolve(data);
 						});
 					});
@@ -725,6 +742,7 @@ var helper = helper || (function () {
 				return exec(hgCommand + ' update --quiet --clean -R ' + repositoryPath, execOptions);
 			})
 			.done(function () {
+				console.log('<<<Затянули изменения репозитория «' + repository.alias + '»');
 				deferred.resolve(null);
 			});
 		return deferred.promise;
