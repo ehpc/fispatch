@@ -19,14 +19,17 @@ var oracle = oracle || (function () {
 		path = require('path'),
 		childProcess = require('child_process'),
 		exec = Q.denodeify(childProcess.exec),
-		readFile = Q.denodeify(fs.readFileSync), // Функция чтения файла
+		readFileSync = Q.denodeify(fs.readFileSync),
+		readFile = Q.denodeify(fs.readFile),
+		readDir = Q.denodeify(fs.readdir),
+		iconv = require('iconv-lite'),
 		execOptions = {
 			maxBuffer: 250000 // Количество байт для буфера командной строки
 		},
 		hgCommand = 'hg'; // Полный путь до меркуриала
 
 	// Считываем настройки
-	readFile('data/settings.json', 'utf8').done(function (data) {
+	readFileSync('data/settings.json', 'utf8').done(function (data) {
 		var settings = JSON.parse(data);
 		hgCommand = settings.hgCommand;
 		execOptions.maxBuffer = settings.processMaxBuffer;
@@ -36,6 +39,7 @@ var oracle = oracle || (function () {
 	 * Обработчик ораклового репозитория перед закачкой
 	 * Алгоритм:
 	 *     1. Копирование папки sql
+	 *     2. Создание файла [схема]_setup.sql
 	 * @param options Настройки вызова из settings.json
 	 * Пример:
 	 *     {
@@ -79,21 +83,101 @@ var oracle = oracle || (function () {
 				helper.getFilesDirByRepoAlias(repoSettings.alias, 'patch'), // Путь до файлов патча
 				helper.getFilesDirByRepoAlias(repoSettings.alias, 'distrib') // Путь до файлов дистрибутива
 			]).then(function (values) {
-				var fromDir = path.join(values[0], options.mergeFrom.path);
-				// Копируем папку sql в патч
-				console.log('Копируем папку sql в патч', fromDir, values[1]);
-				exec('cp -r ' + fromDir + ' ' + values[1], execOptions)
+				var fromDir = path.join(values[0], options.mergeFrom.path),
+					patchDir = values[1],
+					distribDir = values[2];
+				// 1. Копирование папки sql
+				console.log('Копируем папку sql в патч', fromDir, patchDir);
+				exec('cp -r ' + fromDir + ' ' + patchDir, execOptions)
 					.then(function () {
+						console.log('Нужно ли создавать дистрибутив?', snapshotSettings.distrib);
 						if (snapshotSettings.distrib === 'true') {
-							console.log('Копируем папку sql в дистрибутив', fromDir, values[2]);
-							return exec('cp -r ' + fromDir + ' ' + values[2], execOptions);
+							console.log('Копируем папку sql в дистрибутив', fromDir, distribDir);
+							return exec('cp -r ' + fromDir + ' ' + distribDir, execOptions);
 						}
 						else {
 							return true;
 						}
 					})
+					// 2. Создание файлов [схема]_setup.sql
 					.then(function () {
 						console.log('Копирование папки sql завершено');
+						console.log('Создание setup.sql', options['setup.sql'].path);
+						return readFile(options['setup.sql'].path, 'utf-8');
+					})
+					.then(function (setupSqlTemplate) {
+						//destination = path.join(patchDir, 'setup.sql');
+						//setupSql.replace(/[схема]/gi, '');
+						console.log('Ищем схемы');
+
+						patchDir = distribDir; // TODO DELETE
+
+						return readDir(patchDir).then(function (dirContents) {
+							var asyncs = [];
+							console.log('dirContents', dirContents);
+							// Убираем лишние директории
+							dirContents = dirContents.filter(function (dirName) {
+								return dirName !== 'sql';
+							});
+							// Для каждой схемы создаём свой файлик
+							dirContents.forEach(function (schemaName) {
+								var destination = path.join(patchDir, schemaName + '_setup.sql'),
+									otherDirs = dirContents.filter(function (dirName) {
+										return dirName !== schemaName;
+									}),
+									setupSql = setupSqlTemplate;
+
+								// Заменяем базовый шаблон
+								setupSql = setupSql.replace(/\[схема\]/img, schemaName);
+								// Удаляем опциональные куски, которые не относятся к текущей схеме
+								otherDirs.forEach(function (otherSchema) {
+									var rx = new RegExp(
+										options['setup.sql'].optionalBlockRegex.replace(/__SCHEMA__/img, otherSchema),
+										'img'
+									);
+									setupSql = setupSql.replace(rx, '');
+								});
+
+								// Добавляем файлы
+								// TODO
+								var rx = /--Включить все файлы из папки (\S+)( с расширением (\S+))?[\s\S]+?--(@@[\S]+)[\s\S]+?\r\n\r\n/img,
+									fileCommands = '';
+								setupSql = setupSql.replace(rx, function (match, dirName, p1, extension, filePattern) {
+									var filesDir = path.join(patchDir, dirName.replace(/,$/, '')),
+										files, i;
+									try {
+										if (fs.statSync(filesDir).isDirectory()) {
+											console.log('Включения файлов из', filesDir, extension, filePattern);
+											files = fs.readdirSync(filesDir);
+											for (i = 0; i < files.length; i++) {
+												if (fs.statSync(path.join(filesDir, files[i])).isFile() && (!extension || files[i].endsWith(extension))) {
+													console.log('file>>>', files[i]);
+												}
+											}
+										}
+									}
+									catch (e) {
+										console.log(e);
+									}
+									return '';
+								});
+
+								// Удаляем всё остальное
+								otherDirs.forEach(function (otherSchema) {
+									options['setup.sql'].removeRegex.forEach(function (pattern) {
+										var rx = new RegExp(pattern.replace(/__SCHEMA__/img, otherSchema), 'img');
+										setupSql = setupSql.replace(rx, '');
+									});
+								});
+
+								// Сохраняем изменения
+								fs.writeFileSync(destination, iconv.encode(setupSql, 'win1251'));
+							});
+							return Q.all(asyncs);
+						});
+					})
+					.then(function () {
+						console.log('Обработчик оракла завершён');
 						resolve();
 					})
 					.fail(reject);
