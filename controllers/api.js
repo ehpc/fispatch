@@ -95,11 +95,11 @@ router
 											console.log('require(controllers/' + repoSettings.beforeDownload.controller + ')');
 											var controller = require('controllers/' + repoSettings.beforeDownload.controller);
 											if (controller && typeof controller[repoSettings.beforeDownload.action] === 'function') {
-												controller[repoSettings.beforeDownload.action].call(repoSettings, repoSettings.beforeDownload.options).then(function () {
+												controller[repoSettings.beforeDownload.action](repoSettings.beforeDownload.options, repoSettings, repo).then(function () {
 													console.log('Завершился обработчик ' + repoSettings.beforeDownload.action);
 													resolve();
-												}).fail(function () {
-													console.error('Ошибка обработчика ' + repoSettings.beforeDownload.action);
+												}).fail(function (error) {
+													console.error('Ошибка обработчика ' + repoSettings.beforeDownload.action, error);
 													reject();
 												});
 											}

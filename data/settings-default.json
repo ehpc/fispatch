@@ -17,7 +17,17 @@
 			"address": "http://mercurial.fisgroup.ru/fcs/Server/Schemas_dev/",
 			"alias": "oracleSchemas",
 			"cloneRev": "0",
-			"revisionsLimit": "50"
+			"revisionsLimit": "50",
+			"beforeDownload": {
+				"controller": "oracle",
+				"action": "beforeDownload",
+				"options": {
+					"mergeFrom": {
+						"alias": "oracleScripts",
+						"path": "/sql/"
+					}
+				}
+			}
 		},
 		{
 			"address": "http://mercurial.fisgroup.ru/fcs/Server/Scripts/",

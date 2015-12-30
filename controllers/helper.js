@@ -40,6 +40,35 @@ var helper = helper || (function () {
 	});
 
 	/**
+	 * Возвращает путь до файлов репозитория по его псевдониму
+	 * @param alias Псевдоним
+	 * @param type Тип пути (repo, patch)
+	 * @returns {*}
+	 */
+	function getFilesDirByRepoAlias(alias, type) {
+		return Q.Promise(function (resolve) {
+			readFile('data/settings.json', 'utf8').done(function (data) {
+				var settings = JSON.parse(data),
+					tempDir = settings.temp,
+					patchDir = path.join(tempDir, 'files_temp', 'patch'),
+					distribDir = path.join(tempDir, 'files_temp', 'distrib');
+				if (type === 'repo') {
+					resolve(path.join(tempDir, alias));
+				}
+				else if (type === 'patch') {
+					resolve(path.join(patchDir, alias));
+				}
+				else if (type === 'distrib') {
+					resolve(path.join(distribDir, alias));
+				}
+				else {
+					resolve(path.join(tempDir, 'files_temp'));
+				}
+			});
+		});
+	}
+
+	/**
 	 * Основная функция для создания патча
 	 * @param snapshotSettings Настройки сборки
 	 * @returns {Q.Promise<null>}
@@ -127,7 +156,7 @@ var helper = helper || (function () {
 				.then(function () {
 					console.log('Копируем файлы');
 					// Копируем все файлы
-					return copyAllFilesToTemp(repository, tempDir, path.join(filesTempDir, 'distib', snapshotSettings.alias));
+					return copyAllFilesToTemp(repository, tempDir, path.join(filesTempDir, 'distrib', snapshotSettings.alias));
 				})
 				.done(function () {
 					console.log('Скопировали все файлы репозитория «' + snapshotSettings.alias + '» в директорию «' + filesTempDir + '»');
@@ -419,11 +448,16 @@ var helper = helper || (function () {
 			})
 			.then(function () {
 				console.log('Пишем статистику в version.txt');
-				return exec(
-							'echo patchName: ' + patchName + '$"\n"end revision: ' + revs.endRev + '$"\n"' +
-							'-------------- Changed files-----------------$"\n" ' +
-							stat + '----------------------------- > ' +  filesTempDir + '/version.txt', execOptions
-						);
+				if (repository.withVersion) {
+					return exec(
+						'echo patchName: ' + patchName + '$"\n"end revision: ' + revs.endRev + '$"\n"' +
+						'-------------- Changed files-----------------$"\n" ' +
+						stat + '----------------------------- > ' + filesTempDir + '/version.txt', execOptions
+					);
+				}
+				else {
+					return true;
+				}
 			})
 			.done(function () {
 				console.log('Завершили копирование файлов');
@@ -901,7 +935,8 @@ var helper = helper || (function () {
 		createRepoDiff: createRepoDiff,
 		createArchive: createArchive,
 		cleanFilesTempDir: cleanFilesTempDir,
-		pushToSvn: pushToSvn
+		pushToSvn: pushToSvn,
+		getFilesDirByRepoAlias: getFilesDirByRepoAlias
 	};
 
 })();
