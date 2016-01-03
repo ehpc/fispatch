@@ -21,12 +21,15 @@ var oracle = oracle || (function () {
 		exec = Q.denodeify(childProcess.exec),
 		readFileSync = Q.denodeify(fs.readFileSync),
 		readFile = Q.denodeify(fs.readFile),
+		writeFile = Q.denodeify(fs.writeFile),
 		readDir = Q.denodeify(fs.readdir),
 		iconv = require('iconv-lite'),
 		execOptions = {
 			maxBuffer: 250000 // Количество байт для буфера командной строки
 		},
 		hgCommand = 'hg'; // Полный путь до меркуриала
+
+	Q.longStackSupport = true;
 
 	// Считываем настройки
 	readFileSync('data/settings.json', 'utf8').done(function (data) {
@@ -144,20 +147,32 @@ var oracle = oracle || (function () {
 									fileCommands = '';
 								setupSql = setupSql.replace(rx, function (match, dirName, p1, extension, filePattern) {
 									var filesDir = path.join(patchDir, dirName.replace(/,$/, '')),
-										files, i;
+										files, i, fd, filePath;
 									try {
-										if (fs.statSync(filesDir).isDirectory()) {
-											console.log('Включения файлов из', filesDir, extension, filePattern);
-											files = fs.readdirSync(filesDir);
-											for (i = 0; i < files.length; i++) {
-												if (fs.statSync(path.join(filesDir, files[i])).isFile() && (!extension || files[i].endsWith(extension))) {
-													console.log('file>>>', files[i]);
-												}
-											}
-										}
+										fd = fs.openSync(filesDir, 'r');
 									}
 									catch (e) {
-										console.log(e);
+										fd = null;
+									}
+									if (fd && fs.fstatSync(fd).isDirectory()) {
+										fs.close(fd);
+										fd = null;
+										console.log('Включения файлов из', filesDir, extension, filePattern);
+										files = fs.readdirSync(filesDir);
+										for (i = 0; i < files.length; i++) {
+											filePath = path.join(filesDir, files[i]);
+											try {
+												fd = fs.openSync(filePath, 'r');
+											}
+											catch (e) {
+												fd = null;
+											}
+											if (fd && fs.fstatSync(fd).isFile() && (!extension || files[i].endsWith(extension))) {
+												fs.close(fd);
+												fd = null;
+												//console.log('file>>>', files[i]);
+											}
+										}
 									}
 									return '';
 								});
@@ -171,10 +186,10 @@ var oracle = oracle || (function () {
 								});
 
 								// Сохраняем изменения
-								fs.writeFileSync(destination, iconv.encode(setupSql, 'win1251'));
+								//asyncs.push(writeFile(destination, iconv.encode(setupSql, 'win1251')));
 							});
 							return Q.all(asyncs);
-						});
+						}).fail(reject);
 					})
 					.then(function () {
 						console.log('Обработчик оракла завершён');
