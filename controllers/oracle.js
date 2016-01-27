@@ -21,11 +21,13 @@ var oracle = oracle || (function () {
 		exec = Q.denodeify(childProcess.exec),
 		readFileSync = Q.denodeify(fs.readFileSync),
 		readFile = Q.denodeify(fs.readFile),
+		open = Q.denodeify(fs.open),
 		writeFile = Q.denodeify(fs.writeFile),
 		readDir = Q.denodeify(fs.readdir),
+		fstat = Q.denodeify(fs.fstat),
 		iconv = require('iconv-lite'),
 		execOptions = {
-			maxBuffer: 250000 // Количество байт для буфера командной строки
+			maxBuffer: 10000000 // Количество байт для буфера командной строки
 		},
 		hgCommand = 'hg'; // Полный путь до меркуриала
 
@@ -102,94 +104,40 @@ var oracle = oracle || (function () {
 							return true;
 						}
 					})
-					// 2. Создание файлов [схема]_setup.sql
 					.then(function () {
 						console.log('Копирование папки sql завершено');
-						console.log('Создание setup.sql', options['setup.sql'].path);
-						return readFile(options['setup.sql'].path, 'utf-8');
-					})
-					.then(function (setupSqlTemplate) {
-						//destination = path.join(patchDir, 'setup.sql');
-						//setupSql.replace(/[схема]/gi, '');
-						console.log('Ищем схемы');
 
 						patchDir = distribDir; // TODO DELETE
 
-						return readDir(patchDir).then(function (dirContents) {
-							var asyncs = [];
-							console.log('dirContents', dirContents);
-							// Убираем лишние директории
-							dirContents = dirContents.filter(function (dirName) {
-								return dirName !== 'sql';
-							});
-							// Для каждой схемы создаём свой файлик
-							dirContents.forEach(function (schemaName) {
-								var destination = path.join(patchDir, schemaName + '_setup.sql'),
-									otherDirs = dirContents.filter(function (dirName) {
-										return dirName !== schemaName;
-									}),
-									setupSql = setupSqlTemplate;
+						// 2. Ищем все директории, для которых нужно добавить спецфайлы
+						return exec('find ' + patchDir + ' -mindepth 1 -maxdepth 1 -type d ! -name "sql"', execOptions);
+					})
+					// Формируем массив директорий
+					.then(function (schemasList) {
+						var asyncGenerators = [];
+						schemasList = (schemasList + '').trim().split('\n').filter(function (val) {
+							return val !== ',';
+						});
+						console.log('Список директорий схем для обработки', schemasList);
 
-								// Заменяем базовый шаблон
-								setupSql = setupSql.replace(/\[схема\]/img, schemaName);
-								// Удаляем опциональные куски, которые не относятся к текущей схеме
-								otherDirs.forEach(function (otherSchema) {
-									var rx = new RegExp(
-										options['setup.sql'].optionalBlockRegex.replace(/__SCHEMA__/img, otherSchema),
-										'img'
-									);
-									setupSql = setupSql.replace(rx, '');
-								});
+						// Для каждой схемы
+						schemasList.forEach(function (schemaPath) {
+							var schemaName = schemaPath.replace(/^.+\//g, '');
+							// Получаем список файлов
+							asyncGenerators.push(function () {
+								console.log('Выполняем обработку для схемы', schemaName);
+								return exec('find ' + path.join(patchDir, schemaName) + ' -mindepth 1 -maxdepth 2 -type f', execOptions)
+									.then(function (files) {
+										files = (files + '').trim().split('\n').filter(function (val) {
+											return val !== ',';
+										});
 
-								// Добавляем файлы
-								// TODO
-								var rx = /--Включить все файлы из папки (\S+)( с расширением (\S+))?[\s\S]+?--(@@[\S]+)[\s\S]+?\r\n\r\n/img,
-									fileCommands = '';
-								setupSql = setupSql.replace(rx, function (match, dirName, p1, extension, filePattern) {
-									var filesDir = path.join(patchDir, dirName.replace(/,$/, '')),
-										files, i, fd, filePath;
-									try {
-										fd = fs.openSync(filesDir, 'r');
-									}
-									catch (e) {
-										fd = null;
-									}
-									if (fd && fs.fstatSync(fd).isDirectory()) {
-										fs.close(fd);
-										fd = null;
-										console.log('Включения файлов из', filesDir, extension, filePattern);
-										files = fs.readdirSync(filesDir);
-										for (i = 0; i < files.length; i++) {
-											filePath = path.join(filesDir, files[i]);
-											try {
-												fd = fs.openSync(filePath, 'r');
-											}
-											catch (e) {
-												fd = null;
-											}
-											if (fd && fs.fstatSync(fd).isFile() && (!extension || files[i].endsWith(extension))) {
-												fs.close(fd);
-												fd = null;
-												//console.log('file>>>', files[i]);
-											}
-										}
-									}
-									return '';
-								});
-
-								// Удаляем всё остальное
-								otherDirs.forEach(function (otherSchema) {
-									options['setup.sql'].removeRegex.forEach(function (pattern) {
-										var rx = new RegExp(pattern.replace(/__SCHEMA__/img, otherSchema), 'img');
-										setupSql = setupSql.replace(rx, '');
+										console.log('Файлы для схемы ' + schemaName, files);
 									});
-								});
-
-								// Сохраняем изменения
-								//asyncs.push(writeFile(destination, iconv.encode(setupSql, 'win1251')));
 							});
-							return Q.all(asyncs);
-						}).fail(reject);
+						});
+
+						return asyncGenerators.reduce(Q.when, Q(true));
 					})
 					.then(function () {
 						console.log('Обработчик оракла завершён');

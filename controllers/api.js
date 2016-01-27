@@ -93,8 +93,10 @@ router
 										console.log('Для репозитория ' + repo.alias + ' существует обработчик beforeDownload');
 										beforeDownloadAsyncs.push(Q.Promise(function (resolve, reject) {
 											console.log('require(controllers/' + repoSettings.beforeDownload.controller + ')');
+											// Находим контроллер, в котором реализован beforeDownload
 											var controller = require('controllers/' + repoSettings.beforeDownload.controller);
 											if (controller && typeof controller[repoSettings.beforeDownload.action] === 'function') {
+												// Находим экшн контроллера
 												controller[repoSettings.beforeDownload.action](repoSettings.beforeDownload.options, repoSettings, repo).then(function () {
 													console.log('Завершился обработчик ' + repoSettings.beforeDownload.action);
 													resolve();
