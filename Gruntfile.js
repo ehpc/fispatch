@@ -70,7 +70,7 @@ module.exports = function (grunt) {
 
 	// Задача, запускающая веб сервер в режиме «продакшн»
 	// Весь js-код проверяется с помощью jshint. Если есть ошибки, запуск прерывается.
-	grunt.registerTask('start', ['jshint', 'forever:prod:start']);
+	grunt.registerTask('start', ['forever:prod:start']);
 
 	// Задача для остановки сервера
 	grunt.registerTask('stop', ['forever:prod:stop']);

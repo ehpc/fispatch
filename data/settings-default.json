@@ -2,13 +2,13 @@
 	"repositories":
 	[
 		{
-			"address": "http://mercurial.fisgroup.ru/fcs/akbarsweb/",
+			"address": "http://mercurial.fisgroup.ru/fcs/web/akbarsweb/",
 			"alias": "fcs",
 			"cloneRev": "4162",
 			"revisionsLimit": "50"
 		},
 		{
-			"address": "http://mercurial.fisgroup.ru/fcs/colweb/",
+			"address": "http://mercurial.fisgroup.ru/fcs/web/colweb/",
 			"alias": "collectors",
 			"cloneRev": "210",
 			"revisionsLimit": "50"

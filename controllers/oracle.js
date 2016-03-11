@@ -113,8 +113,7 @@ var oracle = oracle || (function () {
 						})
 						// Формируем массив директорий
 						.then(function (schemasList) {
-							var asyncGenerators = [],
-								schemaHash = {};
+							var asyncGenerators = [];
 							schemasList = (schemasList + '').trim().split('\n').filter(function (val) {
 								return val !== ',';
 							});
@@ -129,10 +128,10 @@ var oracle = oracle || (function () {
 									}).filter(function (val) {
 										return val !== schemaName;
 									});
-								schemaHash[schemaName] = {};
 								// Получаем список файлов
 								asyncGenerators.push(function () {
 									console.log('Выполняем обработку для схемы', schemaName);
+									console.log('exec:', 'find ' + path.join(patchDir, schemaName) + ' -mindepth 1 -maxdepth 2 -type f | sort');
 									return exec('find ' + path.join(patchDir, schemaName) + ' -mindepth 1 -maxdepth 2 -type f | sort', execOptions)
 										.then(function (schemaFiles) {
 											schemaFiles = new SchemaFiles(schemaFiles, schemaPath);
@@ -140,7 +139,7 @@ var oracle = oracle || (function () {
 											console.log('Нашли Файлы для схемы ' + schemaName);
 
 											return Q.all([
-												Q(schemaFiles),
+												new Q(schemaFiles),
 												readFile(options['setup.sql'].path, 'utf-8')
 											]);
 										})
@@ -160,7 +159,7 @@ var oracle = oracle || (function () {
 								});
 							});
 
-							return asyncGenerators.reduce(Q.when, Q(true));
+							return asyncGenerators.reduce(Q.when, new Q(true));
 						})
 						.then(function () {
 							console.log('Обработчик оракла завершён');
@@ -175,13 +174,16 @@ var oracle = oracle || (function () {
 		 * Раскрывает шаблон setup.sql
 		 * @param data Шаблон в виде строки
 		 * @param schemaName Название схемы
-		 * @param schemaFiles Файлы схемы
+		 * @param schemaFiles Файлы схемы (SchemaFiles)
 		 * @param otherSchemasList Список схем, кроме текущей
 		 * @param options Настройки
 		 * @returns {XML|string|void|*}
 		 */
 		function transformSetupSql(data, schemaName, schemaFiles, otherSchemasList, options) {
-			var rootFiles = schemaFiles.getFilesFromRoot(); // Список файлов в папке схемы
+			var filesRegexp = new RegExp(
+					options['setup.sql'].filesRegex.replace(/__SCHEMA__/img, schemaName),
+					'img'
+				);
 			console.log('Трансформируем setup.sql для ' + schemaName);
 			// Заменяем базовый шаблон
 			data = data.replace(/\[схема\]/img, schemaName);
@@ -194,6 +196,17 @@ var oracle = oracle || (function () {
 				data = data.replace(rx, '');
 			});
 			// Добавляем файлы согласно шаблонам
+			data = data.replace(filesRegexp, function (match, rawPath, path, rawExt, ext, fileTemplate) {
+				var res = '',
+					files = schemaFiles.getFilesFromDir(path, ext, true),
+					i, currentRes;
+				for (i = 0; i < files.length; i++) {
+					currentRes = fileTemplate;
+					// Шаблонизируем вывод файла
+					res += currentRes.replace(/\[схема\]/img, schemaName).replace(/\[имя_файла\]/img, files[i]) + '\n';
+				}
+				return res;
+			});
 			return data;
 		}
 
@@ -210,27 +223,30 @@ var oracle = oracle || (function () {
 
 		/**
 		 * Получае файлы в папке схемы
+		 * @param ext Расширение файла
+		 * @param fileNamesOnly Возвращать только имена файлов без пути
 		 * @returns {Array}
 		 */
-		SchemaFiles.prototype.getFilesFromRoot = function (ext) {
-			return this.getFilesFromDir(null, ext);
+		SchemaFiles.prototype.getFilesFromRoot = function (ext, fileNamesOnly) {
+			return this.getFilesFromDir(null, ext, fileNamesOnly);
 		};
 
 		/**
 		 * Получает файлы в папке схемы из указанной поддиректории
 		 * @param dirName Поддиректория
 		 * @param ext Расширение файла
+		 * @param fileNamesOnly Возвращать только имена файлов без пути
 		 * @returns {Array}
 		 */
-		SchemaFiles.prototype.getFilesFromDir = function (dirName, ext) {
+		SchemaFiles.prototype.getFilesFromDir = function (dirName, ext, fileNamesOnly) {
 			var rx = new RegExp(this.schemaPath + (dirName ? '/' + dirName : '') + '/[^/]+(?=\n)', 'img'),
-				rxExt = new RegExp('\.' + ext + '$', 'im'),
+				rxExt = new RegExp('\\.' + ext + '$', 'im'),
 				m = rx.exec(this.schemaFilesString),
 				res = [];
 			while (m !== null) {
 				// Если нет фильтрации по расширению или фильтрация проходит
 				if (!ext || rxExt.test(m[0])) {
-					res.push(m[0]);
+					res.push(fileNamesOnly ? m[0].replace(/.+\//img, '') : m[0]);
 				}
 				m = rx.exec(this.schemaFilesString);
 			}
