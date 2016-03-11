@@ -140,21 +140,35 @@ var oracle = oracle || (function () {
 
 											return Q.all([
 												new Q(schemaFiles),
-												readFile(options['setup.sql'].path, 'utf-8')
+												readFile(options['setup.sql'].path, 'utf-8'),
+												readFile(options['data.sql'].path, 'utf-8')
 											]);
 										})
 										.then(function (values) {
+											var transformed;
 
-											// Дешаблонизируем файл и создаём его копию в правильном месте
+											// Дешаблонизируем setup.sql и создаём его копию в правильном месте
+											transformed = transformSqlTemplate('setup.sql', values[1].replace(/\r\n/img, "\n"), schemaName, values[0], otherSchemasList, options);
 											fs.writeFileSync(
 												path.join(patchDir, schemaName + '_setup.sql'),
 												iconv.encode(
-													transformSetupSql(values[1], schemaName, values[0], otherSchemasList, options),
+													transformed.replace(/\n/img, "\r\n"),
 													'win1251'
 												)
 											);
-
 											console.log('Был создан ' + schemaName + '_setup.sql');
+
+											// Дешаблонизируем data.sql и создаём его копию в правильном месте
+											transformed = transformSqlTemplate('data.sql', values[2].replace(/\r\n/img, "\n"), schemaName, values[0], otherSchemasList, options);
+											fs.writeFileSync(
+												path.join(patchDir, schemaName + '_data.sql'),
+												iconv.encode(
+													transformed.replace(/\n/img, "\r\n"),
+													'win1251'
+												)
+											);
+											console.log('Был создан ' + schemaName + '_data.sql');
+
 										});
 								});
 							});
@@ -171,7 +185,8 @@ var oracle = oracle || (function () {
 		}
 
 		/**
-		 * Раскрывает шаблон setup.sql
+		 * Раскрывает шаблон *.sql
+		 * @param templateName Название шаблона (setup.sql, data.sql)
 		 * @param data Шаблон в виде строки
 		 * @param schemaName Название схемы
 		 * @param schemaFiles Файлы схемы (SchemaFiles)
@@ -179,18 +194,18 @@ var oracle = oracle || (function () {
 		 * @param options Настройки
 		 * @returns {XML|string|void|*}
 		 */
-		function transformSetupSql(data, schemaName, schemaFiles, otherSchemasList, options) {
+		function transformSqlTemplate(templateName, data, schemaName, schemaFiles, otherSchemasList, options) {
 			var filesRegexp = new RegExp(
-					options['setup.sql'].filesRegex.replace(/__SCHEMA__/img, schemaName),
+					options[templateName].filesRegex.replace(/__SCHEMA__/img, schemaName),
 					'img'
 				);
-			console.log('Трансформируем setup.sql для ' + schemaName);
+			console.log('Трансформируем ' + templateName + ' для ' + schemaName);
 			// Заменяем базовый шаблон
 			data = data.replace(/\[схема\]/img, schemaName);
 			// Удаляем опциональные куски, которые не относятся к текущей схеме
 			otherSchemasList.forEach(function (otherSchema) {
 				var rx = new RegExp(
-					options['setup.sql'].optionalBlockRegex.replace(/__SCHEMA__/img, otherSchema),
+					options[templateName].optionalBlockRegex.replace(/__SCHEMA__/img, otherSchema),
 					'img'
 				);
 				data = data.replace(rx, '');
