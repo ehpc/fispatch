@@ -40,6 +40,26 @@ var helper = helper || (function () {
 	});
 
 	/**
+	 * Последовательно выполняемые промисы
+	 * @returns {*}
+	 */
+	function sequentialPromises() {
+		var i, generators = [], result = Q(true), results = [];
+		for (i = 0; i < arguments.length; i++) {
+			generators.push(arguments[i]);
+		}
+		generators.forEach(function (f) {
+			result = result.then(function (value) {
+				results.push(value);
+				return f.call(this);
+			});
+		});
+		return result.then(function (value) {
+			return results.concat(value).slice(1);
+		});
+	}
+
+	/**
 	 * Возвращает путь до файлов репозитория по его псевдониму
 	 * @param alias Псевдоним
 	 * @param type Тип пути (repo, patch)
@@ -936,7 +956,8 @@ var helper = helper || (function () {
 		createArchive: createArchive,
 		cleanFilesTempDir: cleanFilesTempDir,
 		pushToSvn: pushToSvn,
-		getFilesDirByRepoAlias: getFilesDirByRepoAlias
+		getFilesDirByRepoAlias: getFilesDirByRepoAlias,
+		sequentialPromises: sequentialPromises
 	};
 
 })();
