@@ -81,6 +81,7 @@ var oracle = oracle || (function () {
 		 * @returns {*}
 		 */
 		function beforeDownload(options, repoSettings, snapshotSettings) {
+			console.log('beforeDownload snapshotSettings', JSON.stringify(snapshotSettings, null, '\t'));
 			return Q.Promise(function (resolve, reject) {
 				Q.all([
 					helper.getFilesDirByRepoAlias(options.mergeFrom.alias, 'repo'), // Путь до файлов репозитория sql
@@ -128,10 +129,30 @@ var oracle = oracle || (function () {
 					.then(function (values) {
 						console.log('Директории: ', values);
 						var asyncGenerators;
+						// 3. Для каждой схемы создаем setup.sql и data.sql
 						asyncGenerators = processSchemas(values[0], patchDir, options);
 						asyncGenerators = asyncGenerators.concat(processSchemas(values[1], distribDir, options));
 						console.log('asyncGenerators: length: ', asyncGenerators.length);
 						return helper.sequentialPromises.apply(this, asyncGenerators);
+					})
+					.then(function () {
+						// 4. Создаём config.ini
+						return Q.all([
+							readFile(options['config.ini'].path, 'utf-8')
+						]);
+					})
+					.then(function (values) {
+						var transformedConfigIni = makeReplacements(values[0], options['config.ini'].replacements, snapshotSettings);
+						[patchDir, distribDir].forEach(function (dir) {
+							fs.writeFileSync(
+								path.join(dir, 'config.ini'),
+								iconv.encode(
+									transformedConfigIni,
+									'win1251'
+								)
+							);
+							console.log('Был создан config.ini для ' + dir);
+						});
 					})
 					.then(function () {
 						console.log('Обработчик оракла завершён');
@@ -140,6 +161,27 @@ var oracle = oracle || (function () {
 					.fail(reject);
 				}).fail(reject);
 			});
+		}
+
+		/**
+		 * Проводит серию автозамен
+		 * @param data Данные
+		 * @param replacements Массив замен
+		 * @param snapshotSettings
+		 * @returns {*}
+		 */
+		function makeReplacements(data, replacements, snapshotSettings) {
+			var i, rx, to;
+			if (replacements && replacements.length) {
+				for (i = 0; i < replacements.length; i++) {
+					to = replacements[i].to;
+					to = to.replace(/__BRANCH__/img, snapshotSettings.branch);
+					to = to.replace(/__PATCH__/img, snapshotSettings.branch.replace(/[^0-9.]/img, ''));
+					rx = new RegExp(replacements[i].from, 'mg');
+					data = data.replace(rx, to);
+				}
+			}
+			return data;
 		}
 
 		/**

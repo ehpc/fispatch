@@ -44,7 +44,7 @@ var helper = helper || (function () {
 	 * @returns {*}
 	 */
 	function sequentialPromises() {
-		var i, generators = [], result = Q(true), results = [];
+		var i, generators = [], result = new Q(true), results = [];
 		for (i = 0; i < arguments.length; i++) {
 			generators.push(arguments[i]);
 		}
