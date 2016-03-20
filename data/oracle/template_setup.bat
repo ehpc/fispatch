@@ -2,52 +2,52 @@ chcp 1251
 @ echo off
 set NLS_LANG=AMERICAN_AMERICA.CL8MSWIN1251
 
-rem ИНИЦИАЛИЗАЦИЯ ФАЙЛА КОНФИГУРАЦИИ
+rem ╨Ш╨Э╨Ш╨ж╨Ш╨Р╨Ы╨Ш╨Ч╨Р╨ж╨Ш╨п ╨д╨Р╨Щ╨Ы╨Р ╨Ъ╨Ю╨Э╨д╨Ш╨У╨г╨а╨Р╨ж╨Ш╨Ш
 set SETTINGSFILE=config.ini
 if not exist %SETTINGSFILE% ( 
     echo FAIL: config.ini not found
     exit /b 1
 )
-rem УСТАНОВКА ПАРАМЕТРОВ , кроме рекомпиляции
+rem ╨г╨б╨в╨Р╨Э╨Ю╨Т╨Ъ╨Р ╨Я╨Р╨а╨Р╨Ь╨Х╨в╨а╨Ю╨Т , ╨║╤А╨╛╨╝╨╡ ╤А╨╡╨║╨╛╨╝╨┐╨╕╨╗╤П╤Ж╨╕╨╕
 for /f "eol=# delims== tokens=1,2" %%i in (%SETTINGSFILE%) do ( if NOT %%i == R ( set %%i=%%j))
 
-rem зануляем логи
+rem ╨╖╨░╨╜╤Г╨╗╤П╨╡╨╝ ╨╗╨╛╨│╨╕
 sqlplus -S /nolog @sql/null.sql "Install %patch_ver% patch on FIS Collection System..."
 
 Title Install %patch_ver% patch on FIS Collection System...
 
 set NLS_LANG=AMERICAN_AMERICA.CL8MSWIN1251
-rem ----- проверка на правильность подключения ----------
+rem ----- ╨┐╤А╨╛╨▓╨╡╤А╨║╨░ ╨╜╨░ ╨┐╤А╨░╨▓╨╕╨╗╤М╨╜╨╛╤Б╤В╤М ╨┐╨╛╨┤╨║╨╗╤О╤З╨╡╨╜╨╕╤П ----------
 for /f "eol=# delims== tokens=1,2" %%i in (%SETTINGSFILE%) do (  if %%i == R (
 echo.
 sqlplus -L -S /nolog @sql/check_conn.sql  %%j@%dbhost% 
 )
 )
 
-rem ----- проверка на окружение -------------------------
+rem ----- ╨┐╤А╨╛╨▓╨╡╤А╨║╨░ ╨╜╨░ ╨╛╨║╤А╤Г╨╢╨╡╨╜╨╕╨╡ -------------------------
 sqlplus -S %credmon_sch%@%dbhost% @sql/check.sql %patch_ver%
 IF %errorlevel% EQU -1 GOTO err_exit
 
 
-rem Регистрация операций первичная до
+rem ╨а╨╡╨│╨╕╤Б╤В╤А╨░╤Ж╨╕╤П ╨╛╨┐╨╡╤А╨░╤Ж╨╕╨╣ ╨┐╨╡╤А╨▓╨╕╤З╨╜╨░╤П ╨┤╨╛
 rem sqlplus %credmon_sch%@%dbhost% @sql/reg_op_first.sql
 rem IF %errorlevel% EQU -1 GOTO err_exit
 
-rem ==== вывод обхектов
+rem ==== ╨▓╤Л╨▓╨╛╨┤ ╨╛╨▒╤Е╨╡╨║╤В╨╛╨▓
 rem echo.
 rem echo ========================================================
-rem echo Количество валидных/невалидных объектов в схемах
+rem echo ╨Ъ╨╛╨╗╨╕╤З╨╡╤Б╤В╨▓╨╛ ╨▓╨░╨╗╨╕╨┤╨╜╤Л╤Е/╨╜╨╡╨▓╨░╨╗╨╕╨┤╨╜╤Л╤Е ╨╛╨▒╤К╨╡╨║╤В╨╛╨▓ ╨▓ ╤Б╤Е╨╡╨╝╨░╤Е
 rem for /f "eol=# delims== tokens=1,2" %%i in (%SETTINGSFILE%) do (  if %%i == R ( sqlplus %%j@%dbhost% @sql/cnt_valid_objs.sql))
 rem ==========================================================
 
-rem ---- доп предупреждение о особенностях установки ----
+rem ---- ╨┤╨╛╨┐ ╨┐╤А╨╡╨┤╤Г╨┐╤А╨╡╨╢╨┤╨╡╨╜╨╕╨╡ ╨╛ ╨╛╤Б╨╛╨▒╨╡╨╜╨╜╨╛╤Б╤В╤П╤Е ╤Г╤Б╤В╨░╨╜╨╛╨▓╨║╨╕ ----
 set contn=n
 if %features% EQU 1 (
   echo.
   echo ========================================================
-  echo Патч имеет особенности установки. 
-  echo Внимательно прочитайте Readme.txt прежде чем продолжить!  
-  set /p contn=Все доп. требования выполнены [Y - да, N - нет]? 
+  echo ╨Я╨░╤В╤З ╨╕╨╝╨╡╨╡╤В ╨╛╤Б╨╛╨▒╨╡╨╜╨╜╨╛╤Б╤В╨╕ ╤Г╤Б╤В╨░╨╜╨╛╨▓╨║╨╕. 
+  echo ╨Т╨╜╨╕╨╝╨░╤В╨╡╨╗╤М╨╜╨╛ ╨┐╤А╨╛╤З╨╕╤В╨░╨╣╤В╨╡ Readme.txt ╨┐╤А╨╡╨╢╨┤╨╡ ╤З╨╡╨╝ ╨┐╤А╨╛╨┤╨╛╨╗╨╢╨╕╤В╤М!  
+  set /p contn=╨Т╤Б╨╡ ╨┤╨╛╨┐. ╤В╤А╨╡╨▒╨╛╨▓╨░╨╜╨╕╤П ╨▓╤Л╨┐╨╛╨╗╨╜╨╡╨╜╤Л [Y - ╨┤╨░, N - ╨╜╨╡╤В]? 
 ) else (
 goto start:
 ) 
@@ -55,42 +55,42 @@ if /i %contn%==Y (
   echo ========================================================
 goto start:
 ) else ( 
-  echo Процесс установки патча прерван. 	
+  echo ╨Я╤А╨╛╤Ж╨╡╤Б╤Б ╤Г╤Б╤В╨░╨╜╨╛╨▓╨║╨╕ ╨┐╨░╤В╤З╨░ ╨┐╤А╨╡╤А╨▓╨░╨╜. 	
   echo ========================================================
   GOTO err_exit
 )
 :start
-rem ================== !СТРОЧКИ ВЫШЕ РЕДАКТИРОВАТЬ НЕ НАДО!  ================================
+rem ================== !╨б╨в╨а╨Ю╨з╨Ъ╨Ш ╨Т╨л╨и╨Х ╨а╨Х╨Ф╨Р╨Ъ╨в╨Ш╨а╨Ю╨Т╨Р╨в╨м ╨Э╨Х ╨Э╨Р╨Ф╨Ю!  ================================
 
-rem ОСНОВНЫЕ СКРИПТЫ DDL
-rem Включить файла для всех схем, которые есть в патче
-sqlplus %[схема]_sch%@%dbhost% @[схема]_setup.sql
+rem ╨Ю╨б╨Э╨Ю╨Т╨Э╨л╨Х ╨б╨Ъ╨а╨Ш╨Я╨в╨л DDL
+rem ╨Т╨║╨╗╤О╤З╨╕╤В╤М ╤Д╨░╨╣╨╗╨░ ╨┤╨╗╤П ╨▓╤Б╨╡╤Е ╤Б╤Е╨╡╨╝, ╨║╨╛╤В╨╛╤А╤Л╨╡ ╨╡╤Б╤В╤М ╨▓ ╨┐╨░╤В╤З╨╡
+sqlplus %[╤Б╤Е╨╡╨╝╨░]_sch%@%dbhost% @[╤Б╤Е╨╡╨╝╨░]_setup.sql
 
-rem ==== рекопмиляция схем, трогать не надо ==================
+rem ==== ╤А╨╡╨║╨╛╨┐╨╝╨╕╨╗╤П╤Ж╨╕╤П ╤Б╤Е╨╡╨╝, ╤В╤А╨╛╨│╨░╤В╤М ╨╜╨╡ ╨╜╨░╨┤╨╛ ==================
 for /f "eol=# delims== tokens=1,2" %%i in (%SETTINGSFILE%) do (  if %%i == R ( sqlplus %%j@%dbhost% @sql/recompile2.sql ))
 rem ==========================================================
 
-rem ОСНОВНЫЕ СКРИПТЫ DML
-rem Включить файла для всех схем, которые есть в патче
-sqlplus %[схема]_sch%@%dbhost% @[схема]_data.sql
+rem ╨Ю╨б╨Э╨Ю╨Т╨Э╨л╨Х ╨б╨Ъ╨а╨Ш╨Я╨в╨л DML
+rem ╨Т╨║╨╗╤О╤З╨╕╤В╤М ╤Д╨░╨╣╨╗╨░ ╨┤╨╗╤П ╨▓╤Б╨╡╤Е ╤Б╤Е╨╡╨╝, ╨║╨╛╤В╨╛╤А╤Л╨╡ ╨╡╤Б╤В╤М ╨▓ ╨┐╨░╤В╤З╨╡
+sqlplus %[╤Б╤Е╨╡╨╝╨░]_sch%@%dbhost% @[╤Б╤Е╨╡╨╝╨░]_data.sql
 
-rem ================== !СТРОЧКИ НИЖЕ РЕДАКТИРОВАТЬ НЕ НАДО!  ================================
-rem Регистрация операция
+rem ================== !╨б╨в╨а╨Ю╨з╨Ъ╨Ш ╨Э╨Ш╨Ц╨Х ╨а╨Х╨Ф╨Р╨Ъ╨в╨Ш╨а╨Ю╨Т╨Р╨в╨м ╨Э╨Х ╨Э╨Р╨Ф╨Ю!  ================================
+rem ╨а╨╡╨│╨╕╤Б╤В╤А╨░╤Ж╨╕╤П ╨╛╨┐╨╡╤А╨░╤Ж╨╕╤П
 sqlplus %credmon_sch%@%dbhost% @sql/reg_op.sql
-rem Установка версии патча
+rem ╨г╤Б╤В╨░╨╜╨╛╨▓╨║╨░ ╨▓╨╡╤А╤Б╨╕╨╕ ╨┐╨░╤В╤З╨░
 sqlplus %credmon_sch%@%dbhost% @sql/set_ver.sql %patch_ver%
-rem Создание JOBов в credmon
+rem ╨б╨╛╨╖╨┤╨░╨╜╨╕╨╡ JOB╨╛╨▓ ╨▓ credmon
 sqlplus %credmon_sch%@%dbhost% @sql/create_credmon_jobs.sql
-rem Раздача грантов на объекты CREDMON для STRATEGY
+rem ╨а╨░╨╖╨┤╨░╤З╨░ ╨│╤А╨░╨╜╤В╨╛╨▓ ╨╜╨░ ╨╛╨▒╤К╨╡╨║╤В╤Л CREDMON ╨┤╨╗╤П STRATEGY
 sqlplus %credmon_sch%@%dbhost% @sql/grants_2_strat_ddl.sql
-rem Раздача грантов на объекты CREDMON для STRATEGY
+rem ╨а╨░╨╖╨┤╨░╤З╨░ ╨│╤А╨░╨╜╤В╨╛╨▓ ╨╜╨░ ╨╛╨▒╤К╨╡╨║╤В╤Л CREDMON ╨┤╨╗╤П STRATEGY
 sqlplus %fcs_org_sch%@%dbhost% @sql/grants_fcs_org_2_strat_ddl.sql
-rem Права
+rem ╨Я╤А╨░╨▓╨░
 sqlplus %strategy_sch%@%dbhost% @sql/grants_strat_2_pub_ddl.sql
-rem Трансляция стратегий
+rem ╨в╤А╨░╨╜╤Б╨╗╤П╤Ж╨╕╤П ╤Б╤В╤А╨░╤В╨╡╨│╨╕╨╣
 sqlplus %strategy_sch%@%dbhost% @sql/translate_all_strategy.sql
-rem Запуск работ 
+rem ╨Ч╨░╨┐╤Г╤Б╨║ ╤А╨░╨▒╨╛╤В 
 sqlplus %strategy_sch%@%dbhost% @sql/run_strat_jobs_dml.sql
-rem если возникла ошибка
+rem ╨╡╤Б╨╗╨╕ ╨▓╨╛╨╖╨╜╨╕╨║╨╗╨░ ╨╛╤И╨╕╨▒╨║╨░
 :err_exit
 pause

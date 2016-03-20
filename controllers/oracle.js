@@ -90,7 +90,9 @@ var oracle = oracle || (function () {
 				]).then(function (values) {
 					var fromDir = path.join(values[0], options.mergeFrom.path),
 						patchDir = values[1],
-						distribDir = values[2];
+						distribDir = values[2],
+						patchSchemaNames,
+						distribSchemaNames;
 
 					console.log('Нужно ли создавать дистрибутив?', snapshotSettings.distrib);
 
@@ -128,10 +130,14 @@ var oracle = oracle || (function () {
 					})
 					.then(function (values) {
 						console.log('Директории: ', values);
-						var asyncGenerators;
+						var res, asyncGenerators;
 						// 3. Для каждой схемы создаем setup.sql и data.sql
-						asyncGenerators = processSchemas(values[0], patchDir, options);
-						asyncGenerators = asyncGenerators.concat(processSchemas(values[1], distribDir, options));
+						res = processSchemas(values[0], patchDir, options);
+						asyncGenerators = res.asyncGenerators;
+						patchSchemaNames = res.schemaNames;
+						res = processSchemas(values[1], distribDir, options);
+						asyncGenerators = asyncGenerators.concat(res.asyncGenerators);
+						distribSchemaNames = res.schemaNames;
 						console.log('asyncGenerators: length: ', asyncGenerators.length);
 						return helper.sequentialPromises.apply(this, asyncGenerators);
 					})
@@ -142,6 +148,7 @@ var oracle = oracle || (function () {
 						]);
 					})
 					.then(function (values) {
+						// Трансформируем config.ini
 						var transformedConfigIni = makeReplacements(values[0], options['config.ini'].replacements, snapshotSettings);
 						[patchDir, distribDir].forEach(function (dir) {
 							fs.writeFileSync(
@@ -155,6 +162,34 @@ var oracle = oracle || (function () {
 						});
 					})
 					.then(function () {
+						// 5. Создаём setup.bat
+						return Q.all([
+							readFile(options['setup.bat'].path, 'utf-8')
+						]);
+					})
+					.then(function (values) {
+						[
+							{
+								dir: patchDir,
+								schemaNames: patchSchemaNames
+							},
+							{
+								dir: distribDir,
+								schemaNames: distribSchemaNames
+							}
+						].forEach(function (data) {
+							var transformedSetupBat = transformSetupBat(values[0], data.schemaNames, options['setup.bat']);
+							fs.writeFileSync(
+								path.join(data.dir, 'setup.bat'),
+								iconv.encode(
+									transformedSetupBat,
+									'win1251'
+								)
+							);
+							console.log('Был создан setup.bat для ' + data.dir);
+						});
+					})
+					.then(function () {
 						console.log('Обработчик оракла завершён');
 						resolve();
 					})
@@ -164,10 +199,31 @@ var oracle = oracle || (function () {
 		}
 
 		/**
+		 * Трансформирует setup.bat
+		 * @param data Данные
+		 * @param schemaNames Список схем
+		 * @param options Настройки
+		 * @returns {string|void|XML|*}
+		 */
+		function transformSetupBat(data, schemaNames, options) {
+			var rx = new RegExp(options.filesRegex, 'mg');
+			console.log('transformSetupBat regex:', options.filesRegex);
+			data = data.replace(rx, function (match, comment, template) {
+				var res = comment;
+				console.log('transformSetupBat:', match);
+				schemaNames.forEach(function (schemaName) {
+					res += template.replace(/\[схема\]/img, schemaName) + '\r\n';
+				});
+				return res;
+			});
+			return data;
+		}
+
+		/**
 		 * Проводит серию автозамен
 		 * @param data Данные
 		 * @param replacements Массив замен
-		 * @param snapshotSettings
+		 * @param snapshotSettings Данные сборки
 		 * @returns {*}
 		 */
 		function makeReplacements(data, replacements, snapshotSettings) {
@@ -192,7 +248,8 @@ var oracle = oracle || (function () {
 		 * @returns {Array}
 		 */
 		function processSchemas(schemasList, filesDir, options) {
-			var asyncGenerators = [];
+			var asyncGenerators = [],
+				schemaNames = [];
 			schemasList = (schemasList + '').trim().split('\n').filter(function (val) {
 				return val !== ',';
 			});
@@ -205,6 +262,7 @@ var oracle = oracle || (function () {
 					}).filter(function (val) {
 						return val !== schemaName;
 					});
+				schemaNames.push(schemaName);
 				// Получаем список файлов
 				asyncGenerators.push(function () {
 					console.log('Выполняем обработку для схемы', schemaName);
@@ -244,7 +302,10 @@ var oracle = oracle || (function () {
 						});
 				});
 			});
-			return asyncGenerators;
+			return {
+				asyncGenerators: asyncGenerators,
+				schemaNames: schemaNames
+			};
 		}
 
 		/**

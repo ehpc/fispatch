@@ -37,6 +37,19 @@
 						"path": "data/oracle/template_data.sql",
 						"optionalBlockRegex": "--Если имя схемы = __SCHEMA__, то вставить кусок\\s+--Начало вставки для __SCHEMA__[\\s\\S]+?--Конец вставки для __SCHEMA__",
 						"filesRegex": "--Включить все файлы из папки __SCHEMA__(\\/([^,\\s]+),?)?( с расширением \\.(\\S+))?\\s+--(\\S+)\\s+--пример\\s+\\S+\\s"
+					},
+					"config.ini": {
+						"path": "data/oracle/template_config.ini",
+						"replacements": [
+							{
+								"from": "patch_ver='[^\\']*'",
+								"to": "patch_ver='__PATCH__'"
+							}
+						]
+					},
+					"setup.bat": {
+						"path": "data/oracle/template_setup.bat",
+						"filesRegex": "(rem Включить файла для всех схем, которые есть в патче\\r?\\n)(.+)"
 					}
 				}
 			}
