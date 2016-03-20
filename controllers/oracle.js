@@ -227,12 +227,18 @@ var oracle = oracle || (function () {
 		 * @returns {*}
 		 */
 		function makeReplacements(data, replacements, snapshotSettings) {
-			var i, rx, to;
+			var i, rx, to, key;
 			if (replacements && replacements.length) {
 				for (i = 0; i < replacements.length; i++) {
 					to = replacements[i].to;
 					to = to.replace(/__BRANCH__/img, snapshotSettings.branch);
 					to = to.replace(/__PATCH__/img, snapshotSettings.branch.replace(/[^0-9.]/img, ''));
+					// Замена пользовательскими значениями
+					for (key in replacements[i]) {
+						if (replacements[i].hasOwnProperty(key) && key !== 'to' && key !== 'from') {
+							to = to.replace(new RegExp(key, 'mg'), replacements[i][key]);
+						}
+					}
 					rx = new RegExp(replacements[i].from, 'mg');
 					data = data.replace(rx, to);
 				}

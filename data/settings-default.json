@@ -2,14 +2,14 @@
 	"repositories":
 	[
 		{
-			"address": "http://mercurial.fisgroup.ru/fcs/akbarsweb/",
+			"address": "http://mercurial.fisgroup.ru/fcs/web/akbarsweb/",
 			"alias": "fcs",
 			"cloneRev": "4162",
 			"revisionsLimit": "50",
 			"withVersion": true
 		},
 		{
-			"address": "http://mercurial.fisgroup.ru/fcs/colweb/",
+			"address": "http://mercurial.fisgroup.ru/fcs/web/colweb/",
 			"alias": "collectors",
 			"cloneRev": "210",
 			"revisionsLimit": "50",
@@ -43,7 +43,8 @@
 						"replacements": [
 							{
 								"from": "patch_ver='[^\\']*'",
-								"to": "patch_ver='__PATCH__'"
+								"to": "patch_ver='__CUSTOM__'",
+								"__CUSTOM__": "091"
 							}
 						]
 					},
