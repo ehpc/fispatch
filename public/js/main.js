@@ -65,7 +65,7 @@
 				data.repos.push({
 					alias: alias,
 					type: 'rev',
-					startRev: startRev.split(';')[1],
+					startRev: startRev.split(';')[0],
 					endRev: endRev.split(';')[0],
 					distrib: isDistrib
 				});
@@ -107,24 +107,37 @@
 				mainController.makePatch('patch_download', data).done(function (res) {
 					waitingDialog.hide();
 					info('Патч «' + res.name + '» доступен по ссылке: <a href="' + res.url + '">' + res.url + '</a>');
+				}).fail(function () {
+					waitingDialog.hide();
+					alert('Ошибка при сборке патча.');
 				});
 			}
 		});
 
 		// Кнопка сохранения настроек
 		$('#buttonSaveSettings').on('click', function () {
-			waitingDialog.show('Сохраняем настройки...');
-			mainController.setSettings(JSON.parse($formSettings.val())).done(function () {
-				waitingDialog.hide();
-				location.reload();
+			confirm('Вы уверены, что хотите сохранить настройки?', function () {
+				waitingDialog.show('Сохраняем настройки...');
+				mainController.setSettings(JSON.parse($formSettings.val())).done(function () {
+					waitingDialog.hide();
+					location.reload();
+				}).fail(function () {
+					waitingDialog.hide();
+					alert('Ошибка при сохранении настроек.');
+				});
 			});
 		});
 
 		// Кнопка сброса настроек
 		$('#buttonResetSettings').on('click', function () {
-			waitingDialog.show('Сбрасываем настройки...');
-			mainController.resetSettings().done(function () {
-				location.reload();
+			confirm('Вы уверены, что хотите сбросить настройки?', function () {
+				waitingDialog.show('Сбрасываем настройки...');
+				mainController.resetSettings().done(function () {
+					location.reload();
+				}).fail(function () {
+					waitingDialog.hide();
+					alert('Ошибка при сбрасывании настроек.');
+				});
 			});
 		});
 	});

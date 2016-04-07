@@ -494,10 +494,29 @@ var helper = helper || (function () {
 	 * @param endRev Конечная ревизия
 	 * @returns {Q.Promise<Array>}
 	 */
-	function getChangedFiles(repository, tempDir,startRev, endRev) {
+	function getChangedFiles(repository, tempDir, startRev, endRev) {
 		var repositoryPath = path.join(tempDir, repository.alias),
-			deferred = Q.defer();
-		console.log('Находим изменённые файлы для репозитория «' + repository.alias + '»', hgCommand + ' status -A --rev ' + startRev + ':' + endRev + ' -R ' + repositoryPath);
+			deferred = Q.defer(),
+			hgFilter = repository.hgFilter || '';
+		// hg log --template "{join(file_adds,'\n')}\n{join(file_mods,'\n')}\n" --rev "a00e68e1f1af:f72c26489b27 and not grep(Слияние)" -R /srv/www/temp/fcs | sort | uniq -u
+		console.log('Находим изменённые файлы для репозитория «' + repository.alias + '»',
+			hgCommand + ' log --template "{join(file_adds,\'\\n\')}\\n{join(file_mods,\'\\n\')}\\n" --rev "' + startRev + ':' + endRev + ' ' + hgFilter + '" -R ' + repositoryPath + ' | sort | uniq');
+		exec(hgCommand + ' log --template "{join(file_adds,\'\\n\')}\\n{join(file_mods,\'\\n\')}\\n" --rev "' + startRev + ':' + endRev + ' ' + hgFilter + '" -R ' + repositoryPath + ' | sort | uniq', execOptions)
+			.done(function (out) {
+				// Команда вернула нам список файлов с их статусами в репозитории
+				var files = out[0].split("\n"),
+					fileNames = [];
+				// Для всех файлов в списке
+				files.forEach(function (file) {
+					if (file) {
+						fileNames.push(file);
+					}
+				});
+				fs.writeFileSync('logs/fileNames.txt', fileNames.join('\n'));
+				deferred.resolve(fileNames);
+			});
+
+		/*console.log('Находим изменённые файлы для репозитория «' + repository.alias + '»', hgCommand + ' status -A --rev ' + startRev + ':' + endRev + ' -R ' + repositoryPath);
 		exec(hgCommand + ' status -A --rev ' + startRev + ':' + endRev + ' -R ' + repositoryPath, execOptions)
 			.done(function (out) {
 				// Команда вернула нам список файлов с их статусами в репозитории
@@ -516,7 +535,7 @@ var helper = helper || (function () {
 				});
 				fs.writeFileSync('logs/fileNames.txt', fileNames.join('\n'));
 				deferred.resolve(fileNames);
-			});
+			});*/
 		return deferred.promise;
 	}
 
@@ -708,11 +727,12 @@ var helper = helper || (function () {
 									console.error('Нет данных для репозитория ' + repository.alias + ' и ветки ' + branchName);
 									console.error(JSON.stringify(data[repository.alias]));
 								}
+								// Добавляем ревизию в список
 								data[repository.alias].revisions.push({
 									rev: res[1],
 									branch: branchName,
 									node: res[3],
-									desc:  descTrimmed + ((descTrimmed.length < res[4].length) ? '...' : ''),
+									desc: descTrimmed + ((descTrimmed.length < res[4].length) ? '...' : ''),
 									parent1: res[5],
 									color: data[repository.alias].branchesMetadata[branchName].color
 								});
