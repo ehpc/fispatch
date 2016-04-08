@@ -122,6 +122,7 @@ var oracle = oracle || (function () {
 								console.log('Ищем все директории, для которых нужно добавить спецфайлы для патча', 'find ' + patchDir + ' -mindepth 1 -maxdepth 1 -type d ! -name "sql" | sort');
 								return exec('find ' + patchDir + ' -mindepth 1 -maxdepth 1 -type d ! -name "sql" | sort', execOptions);
 							},
+							// TODO Если дистриб не выбран?
 							function () {
 								console.log('Ищем все директории, для которых нужно добавить спецфайлы для дистрибутива', 'find ' + distribDir + ' -mindepth 1 -maxdepth 1 -type d ! -name "sql" | sort');
 								return exec('find ' + distribDir + ' -mindepth 1 -maxdepth 1 -type d ! -name "sql" | sort', execOptions);
@@ -149,8 +150,12 @@ var oracle = oracle || (function () {
 					})
 					.then(function (values) {
 						// Трансформируем config.ini
-						var transformedConfigIni = makeReplacements(values[0], options['config.ini'].replacements, snapshotSettings);
-						[patchDir, distribDir].forEach(function (dir) {
+						var transformedConfigIni = makeReplacements(values[0], options['config.ini'].replacements, snapshotSettings),
+							dirs = [patchDir];
+						if (snapshotSettings.distrib === 'true') {
+							dirs.push(distribDir);
+						}
+						dirs.forEach(function (dir) {
 							fs.writeFileSync(
 								path.join(dir, 'config.ini'),
 								iconv.encode(
@@ -168,16 +173,17 @@ var oracle = oracle || (function () {
 						]);
 					})
 					.then(function (values) {
-						[
-							{
-								dir: patchDir,
-								schemaNames: patchSchemaNames
-							},
-							{
+						var configs = [{
+							dir: patchDir,
+							schemaNames: patchSchemaNames
+						}];
+						if (snapshotSettings.distrib === 'true') {
+							configs.push({
 								dir: distribDir,
 								schemaNames: distribSchemaNames
-							}
-						].forEach(function (data) {
+							});
+						}
+						configs.forEach(function (data) {
 							var transformedSetupBat = transformSetupBat(values[0], data.schemaNames, options['setup.bat']);
 							fs.writeFileSync(
 								path.join(data.dir, 'setup.bat'),
@@ -256,58 +262,60 @@ var oracle = oracle || (function () {
 		function processSchemas(schemasList, filesDir, options) {
 			var asyncGenerators = [],
 				schemaNames = [];
-			schemasList = (schemasList + '').trim().split('\n').filter(function (val) {
-				return val !== ',';
-			});
-			console.log('Список директорий схем для обработки', schemasList);
-			// Для каждой схемы
-			schemasList.forEach(function (schemaPath) {
-				var schemaName = schemaPath.replace(/^.+\//g, ''),
-					otherSchemasList = schemasList.map(function (val) {
-						return val.match(/[^\/]+$/img)[0];
-					}).filter(function (val) {
-						return val !== schemaName;
-					});
-				schemaNames.push(schemaName);
-				// Получаем список файлов
-				asyncGenerators.push(function () {
-					console.log('Выполняем обработку для схемы', schemaName);
-					console.log('exec:', 'find ' + path.join(filesDir, schemaName) + ' -mindepth 1 -maxdepth 2 -type f | sort');
-					return exec('find ' + path.join(filesDir, schemaName) + ' -mindepth 1 -maxdepth 2 -type f | sort', execOptions)
-						.then(function (schemaFiles) {
-							schemaFiles = new SchemaFiles(schemaFiles, schemaPath);
-							console.log('Нашли Файлы для схемы ' + schemaName);
-							return Q.all([
-								new Q(schemaFiles),
-								readFile(options['setup.sql'].path, 'utf-8'),
-								readFile(options['data.sql'].path, 'utf-8')
-							]);
-						})
-						.then(function (values) {
-							var transformed;
-							// Дешаблонизируем setup.sql и создаём его копию в правильном месте
-							transformed = transformSqlTemplate('setup.sql', values[1].replace(/\r\n/img, "\n"), schemaName, values[0], otherSchemasList, options);
-							fs.writeFileSync(
-								path.join(filesDir, schemaName + '_setup.sql'),
-								iconv.encode(
-									transformed.replace(/\n/img, "\r\n"),
-									'win1251'
-								)
-							);
-							console.log('Был создан ' + schemaName + '_setup.sql');
-							// Дешаблонизируем data.sql и создаём его копию в правильном месте
-							transformed = transformSqlTemplate('data.sql', values[2].replace(/\r\n/img, "\n"), schemaName, values[0], otherSchemasList, options);
-							fs.writeFileSync(
-								path.join(filesDir, schemaName + '_data.sql'),
-								iconv.encode(
-									transformed.replace(/\n/img, "\r\n"),
-									'win1251'
-								)
-							);
-							console.log('Был создан ' + schemaName + '_data.sql');
-						});
+			if (schemasList) {
+				schemasList = (schemasList + '').trim().split('\n').filter(function (val) {
+					return val !== ',';
 				});
-			});
+				console.log('Список директорий схем для обработки', schemasList);
+				// Для каждой схемы
+				schemasList.forEach(function (schemaPath) {
+					var schemaName = schemaPath.replace(/^.+\//g, ''),
+						otherSchemasList = schemasList.map(function (val) {
+							return val.match(/[^\/]+$/img)[0];
+						}).filter(function (val) {
+							return val !== schemaName;
+						});
+					schemaNames.push(schemaName);
+					// Получаем список файлов
+					asyncGenerators.push(function () {
+						console.log('Выполняем обработку для схемы', schemaName);
+						console.log('exec:', 'find ' + path.join(filesDir, schemaName) + ' -mindepth 1 -maxdepth 2 -type f | sort');
+						return exec('find ' + path.join(filesDir, schemaName) + ' -mindepth 1 -maxdepth 2 -type f | sort', execOptions)
+							.then(function (schemaFiles) {
+								schemaFiles = new SchemaFiles(schemaFiles, schemaPath);
+								console.log('Нашли Файлы для схемы ' + schemaName);
+								return Q.all([
+									new Q(schemaFiles),
+									readFile(options['setup.sql'].path, 'utf-8'),
+									readFile(options['data.sql'].path, 'utf-8')
+								]);
+							})
+							.then(function (values) {
+								var transformed;
+								// Дешаблонизируем setup.sql и создаём его копию в правильном месте
+								transformed = transformSqlTemplate('setup.sql', values[1].replace(/\r\n/img, "\n"), schemaName, values[0], otherSchemasList, options);
+								fs.writeFileSync(
+									path.join(filesDir, schemaName + '_setup.sql'),
+									iconv.encode(
+										transformed.replace(/\n/img, "\r\n"),
+										'win1251'
+									)
+								);
+								console.log('Был создан ' + schemaName + '_setup.sql');
+								// Дешаблонизируем data.sql и создаём его копию в правильном месте
+								transformed = transformSqlTemplate('data.sql', values[2].replace(/\r\n/img, "\n"), schemaName, values[0], otherSchemasList, options);
+								fs.writeFileSync(
+									path.join(filesDir, schemaName + '_data.sql'),
+									iconv.encode(
+										transformed.replace(/\n/img, "\r\n"),
+										'win1251'
+									)
+								);
+								console.log('Был создан ' + schemaName + '_data.sql');
+							});
+					});
+				});
+			}
 			return {
 				asyncGenerators: asyncGenerators,
 				schemaNames: schemaNames

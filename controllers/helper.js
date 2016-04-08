@@ -52,10 +52,15 @@ var helper = helper || (function () {
 			result = result.then(function (value) {
 				results.push(value);
 				return f.call(this);
+			}, function () {
+				results.push(null);
+				return f.call(this);
 			});
 		});
 		return result.then(function (value) {
 			return results.concat(value).slice(1);
+		}, function () {
+			return results.concat(null).slice(1);
 		});
 	}
 
@@ -121,7 +126,7 @@ var helper = helper || (function () {
 								.then(function (revs) {
 									console.log('Ревизии репозитория «' + snapshotSettings.alias + '»', revs);
 									console.log('Копируем изменённые файлы репозитория «' + snapshotSettings.alias + '»');
-									return copyChangesFilesToTemp(repository, tempDir, revs, path.join(filesTempDirBase, 'patch', snapshotSettings.alias), patchName);
+									return copyChangesFilesToTemp(repository, tempDir, revs, path.join(filesTempDirBase, 'patch', snapshotSettings.alias), patchName, snapshotSettings.branch);
 								})
 								.done(function () {
 									console.log('Скопировали изменённые файлы репозитория «' + snapshotSettings.alias + '»');
@@ -395,9 +400,11 @@ var helper = helper || (function () {
 	 * @param tempDir Временная директория
 	 * @param revs Объект с ревизиями
 	 * @param filesTempDir Временная директория назначения
+	 * @param patchName
+	 * @param branch Собираемая ветка
 	 * @returns {Q.Promise<null>}
 	 */
-	function copyChangesFilesToTemp(repository, tempDir, revs, filesTempDir, patchName) {
+	function copyChangesFilesToTemp(repository, tempDir, revs, filesTempDir, patchName, branch) {
 		var deferred = Q.defer(),
 			changedFiles = [],
 			repositoryPath = path.join(tempDir, repository.alias),
@@ -408,7 +415,7 @@ var helper = helper || (function () {
 			asyncs2Cmds = [],
 			stat = '';
 		// Получаем изменённые файлы
-		getChangedFiles(repository, tempDir, revs.startRev, revs.endRev)
+		getChangedFiles(repository, tempDir, revs.startRev, revs.endRev, branch)
 			.then(function (files) {
 				console.log('Изменённые файлы репозитория «' + repository.alias + '»', files.length, 'штук');
 				changedFiles = files;
@@ -492,16 +499,18 @@ var helper = helper || (function () {
 	 * @param tempDir Временная директория
 	 * @param startRev Начальная ревизия
 	 * @param endRev Конечная ревизия
+	 * @param branch Собираемая ветка
 	 * @returns {Q.Promise<Array>}
 	 */
-	function getChangedFiles(repository, tempDir, startRev, endRev) {
+	function getChangedFiles(repository, tempDir, startRev, endRev, branch) {
 		var repositoryPath = path.join(tempDir, repository.alias),
 			deferred = Q.defer(),
+			branchFilter = branch ? 'branch(' + branch + ')' : startRev + ':' + endRev,
 			hgFilter = repository.hgFilter || '';
 		// hg log --template "{join(file_adds,'\n')}\n{join(file_mods,'\n')}\n" --rev "a00e68e1f1af:f72c26489b27 and not grep(Слияние)" -R /srv/www/temp/fcs | sort | uniq -u
 		console.log('Находим изменённые файлы для репозитория «' + repository.alias + '»',
-			hgCommand + ' log --template "{join(file_adds,\'\\n\')}\\n{join(file_mods,\'\\n\')}\\n" --rev "' + startRev + ':' + endRev + ' ' + hgFilter + '" -R ' + repositoryPath + ' | sort | uniq');
-		exec(hgCommand + ' log --template "{join(file_adds,\'\\n\')}\\n{join(file_mods,\'\\n\')}\\n" --rev "' + startRev + ':' + endRev + ' ' + hgFilter + '" -R ' + repositoryPath + ' | sort | uniq', execOptions)
+			hgCommand + ' log --template "{join(file_adds,\'\\n\')}\\n{join(file_mods,\'\\n\')}\\n" --rev "' + branchFilter + ' ' + hgFilter + '" -R ' + repositoryPath + ' | sort | uniq');
+		exec(hgCommand + ' log --template "{join(file_adds,\'\\n\')}\\n{join(file_mods,\'\\n\')}\\n" --rev "' + branchFilter + ' ' + hgFilter + '" -R ' + repositoryPath + ' | sort | uniq', execOptions)
 			.done(function (out) {
 				// Команда вернула нам список файлов с их статусами в репозитории
 				var files = out[0].split("\n"),
@@ -551,7 +560,7 @@ var helper = helper || (function () {
 			deferred = Q.defer(),
 			startRev, endRev;
 		console.log('Вычисляем обрамляющие ревизии репозитория «' + repository.alias + '» для ветки «' + branch + '»', 'hg log -r "parents(min(branch(\'' + branch + '\')))" --template "{node}\n" -R ' + repositoryPath);
-		exec(hgCommand + ' log -r "parents(min(branch(\'' + branch + '\')))" --template "{node}\n" -R ' + repositoryPath, execOptions)
+		exec(hgCommand + ' log -r "min(branch(\'' + branch + '\'))" --template "{node}\n" -R ' + repositoryPath, execOptions)
 			.then(function (out) {
 				startRev = out[0].split("\n")[0];
 				console.log('Вычисляем конечную ревизию', 'hg log -r "max(branch(\'' + branch + '\'))" --template "{node}\n" -R ' + repositoryPath);
