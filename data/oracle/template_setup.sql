@@ -1,4 +1,3 @@
--- noinspection SqlNoDataSourceInspectionForFile
 spool setup.log append
 SET SERVEROUTPUT ON
 set verify off

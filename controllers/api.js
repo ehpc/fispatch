@@ -97,7 +97,7 @@ router
 											var controller = require('controllers/' + repoSettings.beforeDownload.controller);
 											if (controller && typeof controller[repoSettings.beforeDownload.action] === 'function') {
 												// Находим экшн контроллера
-												controller[repoSettings.beforeDownload.action](repoSettings.beforeDownload.options, repoSettings, repo).then(function () {
+												controller[repoSettings.beforeDownload.action](repoSettings.beforeDownload.options, repoSettings, repo, data).then(function () {
 													console.log('Завершился обработчик ' + repoSettings.beforeDownload.action);
 													resolve();
 												}).fail(function (error) {

@@ -44,8 +44,8 @@
 						"replacements": [
 							{
 								"from": "patch_ver='[^\\']*'",
-								"to": "patch_ver='__CUSTOM__'",
-								"__CUSTOM__": "091"
+								"to": "patch_ver='__NAME__'",
+								"__CUSTOM__": "Произвольная строка"
 							}
 						]
 					},

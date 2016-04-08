@@ -71,6 +71,7 @@ var oracle = oracle || (function () {
 		 *         }
 		 *     }
 		 * @param snapshotSettings Настройки сборки репозитория
+		 * @param patchData Данные сборщика
 		 * Пример:
 		 *     {
 		 *         "alias": "oracleSchemas",
@@ -80,7 +81,7 @@ var oracle = oracle || (function () {
 		 *     }
 		 * @returns {*}
 		 */
-		function beforeDownload(options, repoSettings, snapshotSettings) {
+		function beforeDownload(options, repoSettings, snapshotSettings, patchData) {
 			console.log('beforeDownload snapshotSettings', JSON.stringify(snapshotSettings, null, '\t'));
 			return Q.Promise(function (resolve, reject) {
 				Q.all([
@@ -150,7 +151,7 @@ var oracle = oracle || (function () {
 					})
 					.then(function (values) {
 						// Трансформируем config.ini
-						var transformedConfigIni = makeReplacements(values[0], options['config.ini'].replacements, snapshotSettings),
+						var transformedConfigIni = makeReplacements(values[0], options['config.ini'].replacements, snapshotSettings, patchData),
 							dirs = [patchDir];
 						if (snapshotSettings.distrib === 'true') {
 							dirs.push(distribDir);
@@ -230,13 +231,15 @@ var oracle = oracle || (function () {
 		 * @param data Данные
 		 * @param replacements Массив замен
 		 * @param snapshotSettings Данные сборки
+		 * @param patchData Данные патча
 		 * @returns {*}
 		 */
-		function makeReplacements(data, replacements, snapshotSettings) {
+		function makeReplacements(data, replacements, snapshotSettings, patchData) {
 			var i, rx, to, key;
 			if (replacements && replacements.length) {
 				for (i = 0; i < replacements.length; i++) {
 					to = replacements[i].to;
+					to = to.replace(/__NAME__/img, patchData.patchData.name);
 					to = to.replace(/__BRANCH__/img, snapshotSettings.branch);
 					to = to.replace(/__PATCH__/img, snapshotSettings.branch.replace(/[^0-9.]/img, ''));
 					// Замена пользовательскими значениями
