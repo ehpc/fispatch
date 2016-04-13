@@ -21,6 +21,9 @@
 			"cloneRev": "0",
 			"revisionsLimit": "50",
 			"hgFilter": "and not grep(Слияние)",
+			"exclude" : [
+				"schemas_definition"
+			],
 			"beforeDownload": {
 				"controller": "oracle",
 				"action": "beforeDownload",

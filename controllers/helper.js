@@ -376,6 +376,7 @@ var helper = helper || (function () {
 	 */
 	function copyAllFilesToTemp(repository, tempDir, filesTempDir) {
 		var deferred = Q.defer(),
+			exclude = repository.exclude || [],
 			repositoryPath = path.join(tempDir, repository.alias);
 		// Создаём временную директорию
 		exec('rm -rf ' + filesTempDir, execOptions)
@@ -386,7 +387,14 @@ var helper = helper || (function () {
 				console.log('Создали временную директорию «' + filesTempDir + '»');
 				// Копируем файлы
 				return exec('rsync -a --exclude=\'.hg\' ' + repositoryPath + '/. ' + filesTempDir, execOptions);
-
+			})
+			.then(function () {
+				var asyncs = [];
+				exclude.forEach(function (pattern) {
+					console.log('Чистим исключаемые файлы и папки «' + 'find ' + filesTempDir + ' -regex "' + filesTempDir + '/' + pattern + '.*" -exec rm -rf {} \\;' + '»');
+					asyncs.push(exec('find ' + filesTempDir + ' -regex "' + filesTempDir + '/' + pattern + '.*" -exec rm -rf {} \\;', execOptions));
+				});
+				return sequentialPromises.apply(this, asyncs);
 			})
 			.done(function () {
 				deferred.resolve(null);
@@ -506,7 +514,8 @@ var helper = helper || (function () {
 		var repositoryPath = path.join(tempDir, repository.alias),
 			deferred = Q.defer(),
 			branchFilter = branch ? 'branch(' + branch + ')' : startRev + ':' + endRev,
-			hgFilter = repository.hgFilter || '';
+			hgFilter = repository.hgFilter || '',
+			exclude = repository.exclude || [];
 		// hg log --template "{join(file_adds,'\n')}\n{join(file_mods,'\n')}\n" --rev "a00e68e1f1af:f72c26489b27 and not grep(Слияние)" -R /srv/www/temp/fcs | sort | uniq -u
 		console.log('Находим изменённые файлы для репозитория «' + repository.alias + '»',
 			hgCommand + ' log --template "{join(file_adds,\'\\n\')}\\n{join(file_mods,\'\\n\')}\\n" --rev "' + branchFilter + ' ' + hgFilter + '" -R ' + repositoryPath + ' | sort | uniq');
@@ -517,8 +526,17 @@ var helper = helper || (function () {
 					fileNames = [];
 				// Для всех файлов в списке
 				files.forEach(function (file) {
+					var excludeFile = false;
 					if (file) {
-						fileNames.push(file);
+						exclude.forEach(function (pattern) {
+							var rx = new RegExp('^' + pattern, 'mg');
+							if (file.match(rx)) {
+								excludeFile = true;
+							}
+						});
+						if (!excludeFile) {
+							fileNames.push(file);
+						}
 					}
 				});
 				fs.writeFileSync('logs/fileNames.txt', fileNames.join('\n'));
