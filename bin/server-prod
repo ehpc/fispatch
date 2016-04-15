@@ -6,7 +6,7 @@
 
 // Создаём сервер
 var app = require('../app');
-app.set('port', process.env.PORT || 80);
+app.set('port', process.env.PORT || 8000);
 
 // Запускаем сервер
 var server = app.listen(app.get('port'), function () {
