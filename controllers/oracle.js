@@ -240,8 +240,10 @@ var oracle = oracle || (function () {
 				for (i = 0; i < replacements.length; i++) {
 					to = replacements[i].to;
 					to = to.replace(/__NAME__/img, patchData.patchData.name);
-					to = to.replace(/__BRANCH__/img, snapshotSettings.branch);
-					to = to.replace(/__PATCH__/img, snapshotSettings.branch.replace(/[^0-9.]/img, ''));
+					if (snapshotSettings.branch) {
+						to = to.replace(/__BRANCH__/img, snapshotSettings.branch);
+						to = to.replace(/__PATCH__/img, snapshotSettings.branch.replace(/[^0-9.]/img, ''));
+					}
 					// Замена пользовательскими значениями
 					for (key in replacements[i]) {
 						if (replacements[i].hasOwnProperty(key) && key !== 'to' && key !== 'from') {
