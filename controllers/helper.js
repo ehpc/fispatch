@@ -513,7 +513,7 @@ var helper = helper || (function () {
 	function getChangedFiles(repository, tempDir, startRev, endRev, branch) {
 		var repositoryPath = path.join(tempDir, repository.alias),
 			deferred = Q.defer(),
-			branchFilter = branch ? 'branch(' + branch + ')' : startRev + ':' + endRev,
+			branchFilter = branch ? 'branch(' + branch + ')' : startRev + '::' + endRev,
 			hgFilter = repository.hgFilter || '',
 			exclude = repository.exclude || [];
 		// hg log --template "{join(file_adds,'\n')}\n{join(file_mods,'\n')}\n" --rev "a00e68e1f1af:f72c26489b27 and not grep(Слияние)" -R /srv/www/temp/fcs | sort | uniq -u
