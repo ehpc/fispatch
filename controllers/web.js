@@ -48,9 +48,6 @@ var web = web || (function () {
 		 */
 		function replaceAll(str, find, replace) {
 			if (str) {
-				console.log('>>>str', str);
-				console.log('>>>find', find);
-				console.log('>>>replace', replace);
 				return str.replace(new RegExp(find.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, '\\$1'), 'g'), replace);
 			}
 			else {
