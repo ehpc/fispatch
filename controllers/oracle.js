@@ -99,7 +99,6 @@ var oracle = oracle || (function () {
 
 					// 1. Копирование папки sql
 
-
 					helper.sequentialPromises(
 						function () {
 							console.log('Копируем папку sql в патч', fromDir, patchDir);

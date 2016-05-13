@@ -6,14 +6,39 @@
 			"alias": "fcs",
 			"cloneRev": "4162",
 			"revisionsLimit": "50",
-			"withVersion": true
+			"withVersion": true,
+			"beforeDownload": {
+				"controller": "web",
+				"action": "beforeDownload",
+				"options": {
+				}
+			}
+		},
+		{
+			"address": "http://mercurial.fisgroup.ru/fcs/web/v3/",
+			"alias": "v3",
+			"cloneRev": "88",
+			"revisionsLimit": "50",
+			"withVersion": true,
+			"beforeDownload": {
+				"controller": "web",
+				"action": "beforeDownload",
+				"options": {
+				}
+			}
 		},
 		{
 			"address": "http://mercurial.fisgroup.ru/fcs/web/colweb/",
 			"alias": "collectors",
 			"cloneRev": "210",
 			"revisionsLimit": "50",
-			"withVersion": true
+			"withVersion": true,
+			"beforeDownload": {
+				"controller": "web",
+				"action": "beforeDownload",
+				"options": {
+				}
+			}
 		},
 		{
 			"address": "http://mercurial.fisgroup.ru/fcs/Server/Schemas/",
