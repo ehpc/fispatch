@@ -34,7 +34,10 @@ block content
 							.col-md-2
 								.checkbox
 									label
-										input.isDistrib(type="checkbox", value="distrib")
+										if (repoName === 'oracleSchemas')
+											input.isDistrib(type="checkbox", value="distrib")
+										else
+											input.isDistrib(type="checkbox", value="distrib", disabled, checked)
 										span Дистрибутив
 							.col-md-4
 								select.form-control.selectpicker.show-tick.formBranch(id="formBranch#{repoName}", data-live-search="true")

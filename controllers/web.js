@@ -134,7 +134,7 @@ var web = web || (function () {
 						}
 						helper.sequentialPromises(
 							function () {
-								return writeFile(path.join(patchDir, 'checksum.txt'), values[0]);
+								return writeFile(path.join(patchDir, 'checksum.txt'), isDistrib ? values[1] : values[0]);
 							},
 							function () {
 								if (isDistrib) {
