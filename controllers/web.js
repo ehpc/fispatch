@@ -109,13 +109,13 @@ var web = web || (function () {
 
 					helper.sequentialPromises(
 						function () {
-							console.log('Вычисляем хеш-суммы файлов патча. ', 'find ' + patchDir + ' -type f -print0 | sort -z | xargs -0 sha1sum');
-							return exec('find ' + patchDir + ' -type f -print0 | sort -z | xargs -0 sha1sum', execOptions);
+							console.log('Вычисляем хеш-суммы файлов патча. ', 'find ' + patchDir + ' -type f -print0 | sort -z | xargs -0 -I {} sh -c \'stat --printf="%Y " {}; sha1sum {};\'');
+							return exec('find ' + patchDir + ' -type f -print0 | sort -z | xargs -0 -I {} sh -c \'stat --printf="%Y " {}; sha1sum {};\'', execOptions);
 						},
 						function () {
 							if (isDistrib) {
-								console.log('Вычисляем хеш-суммы файлов дистрибутива. ', 'find ' + distribDir + ' -type f -print0 | sort -z | xargs -0 sha1sum');
-								return exec('find ' + distribDir + ' -type f -print0 | sort -z | xargs -0 sha1sum', execOptions);
+								console.log('Вычисляем хеш-суммы файлов дистрибутива. ', 'find ' + distribDir + ' -type f -print0 | sort -z | xargs -0 -I {} sh -c \'stat --printf="%Y " {}; sha1sum {};\'');
+								return exec('find ' + distribDir + ' -type f -print0 | sort -z | xargs -0 -I {} sh -c \'stat --printf="%Y " {}; sha1sum {};\'', execOptions);
 							}
 							else {
 								return false;
