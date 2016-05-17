@@ -20,6 +20,9 @@
 			"cloneRev": "88",
 			"revisionsLimit": "50",
 			"withVersion": true,
+			"exclude" : [
+				"process.ini"
+			],
 			"beforeDownload": {
 				"controller": "web",
 				"action": "beforeDownload",
