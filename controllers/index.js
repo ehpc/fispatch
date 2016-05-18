@@ -11,15 +11,24 @@ var router = require('express').Router(),
 	Q = require('q');
 
 router.get('/', function (req, res) {
-	// Подгружаем данные репозиториев
-	Q.all([helper.getReposData(), helper.getSettings()]).done(function (data) {
-		console.log('>>>/done');
-		// Рендерим интерфейс
-		res.render('index', {
-			reposData: data[0],
-			settings: JSON.stringify(data[1], null, 4)
+	var lock = helper.lock(req.ip);
+	if (lock === true) {
+		// Подгружаем данные репозиториев
+		Q.all([helper.getReposData(), helper.getSettings()]).done(function (data) {
+			console.log('>>>/done');
+			// Рендерим интерфейс
+			res.render('index', {
+				reposData: data[0],
+				settings: JSON.stringify(data[1], null, 4)
+			});
+			helper.unlock();
 		});
-	});
+	}
+	else {
+		res.render('locked', {
+			lock: lock
+		});
+	}
 });
 
 module.exports = router;

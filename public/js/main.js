@@ -107,9 +107,10 @@
 				mainController.makePatch('patch_download', data).done(function (res) {
 					waitingDialog.hide();
 					info('Патч «' + res.name + '» доступен по ссылке: <a href="' + res.url + '">' + res.url + '</a>');
-				}).fail(function () {
+				}).fail(function (err) {
+					console.error(err);
 					waitingDialog.hide();
-					alert('Ошибка при сборке патча.');
+					alert('Ошибка при сборке патча. ' + err.responseText);
 				});
 			}
 		});
@@ -121,9 +122,10 @@
 				mainController.setSettings(JSON.parse($formSettings.val())).done(function () {
 					waitingDialog.hide();
 					location.reload();
-				}).fail(function () {
+				}).fail(function (err) {
+					console.error(err);
 					waitingDialog.hide();
-					alert('Ошибка при сохранении настроек.');
+					alert('Ошибка при сохранении настроек.' + err.responseText);
 				});
 			});
 		});
@@ -134,12 +136,59 @@
 				waitingDialog.show('Сбрасываем настройки...');
 				mainController.resetSettings().done(function () {
 					location.reload();
-				}).fail(function () {
+				}).fail(function (err) {
+					console.error(err);
 					waitingDialog.hide();
-					alert('Ошибка при сбрасывании настроек.');
+					alert('Ошибка при сбрасывании настроек.' + err.responseText);
 				});
 			});
 		});
+
+		/**
+		 * Получает сообщение о попытке разблокировки
+		 * @param leftMs Количество миллисекунд до следующей попытки
+		 * @returns {string}
+		 */
+		function getCountdownMessage(leftMs) {
+			var postfix = '';
+			if (leftMs === 1000) {
+				postfix = 'у';
+			}
+			else if (leftMs <= 4000) {
+				postfix = 'ы';
+			}
+			return 'Следующая попытка через ' + parseInt(leftMs / 1000, 10) + ' секунд' + postfix + '.';
+		}
+
+		// Если ожидаем блокировки
+		var $lockMessage = $('.lockMessage'),
+			lockCountdown = 10000,
+			lockTimer;
+		if ($lockMessage.length) {
+			$lockMessage.text(getCountdownMessage(lockCountdown));
+			lockTimer = setInterval(function () {
+				lockCountdown -= 1000;
+				if (lockCountdown <= 0) {
+					clearInterval(lockTimer);
+					window.location.reload();
+				}
+				else {
+					$lockMessage.text(getCountdownMessage(lockCountdown));
+				}
+			}, 1000);
+
+			$('#forceLock').on('click', function () {
+				if (confirm('Вы уверены?')) {
+					clearInterval(lockTimer);
+					$lockMessage.text('All your base are belong to us...');
+					mainController.forceLock().done(function () {
+						window.location.reload();
+					}).fail(function () {
+						window.location.reload();
+					});
+				}
+			});
+		}
 	});
 
 })(jQuery);

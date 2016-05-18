@@ -1,0 +1,13 @@
+extends layout
+block content
+    .container
+        h1 Сборщик патчей FCS
+
+        .panel.panel-default
+            .panel-body
+                .row
+                    .col-md-12
+                        p.bg-warning.
+                            Сборщик уже кем-то используется (IP: #{lock}).
+                            <span class="lockMessage"></span>
+                        <button id="forceLock" class="btn btn-danger" type="submit">Захватить сборщик принудительно</button>

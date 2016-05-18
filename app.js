@@ -53,9 +53,10 @@ app.use(function (req, res, next) {
 });
 // Middleware ошибки
 app.use(function (err, req, res, next) {
+	console.log('+++++++++ERROR', err);
 	res.status(err.status || 500);
 	res.render('error', {
-		message: err.message,
+		message: err.message || err,
 		error: err
 	});
 });

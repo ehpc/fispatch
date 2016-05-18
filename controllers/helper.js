@@ -993,6 +993,50 @@ var helper = helper || (function () {
 		return str.replace(/^\s+|\s+$/g, '');
 	}
 
+	/**
+	 * Установить блокировку
+	 * @param name Имя того, кто заблокировал
+	 * @returns {boolean} True - успешно установлена, false - уже заблокировано кем-то
+	 */
+	function lock(name) {
+		try {
+			fs.lstatSync('lock');
+			var lockVal = fs.readFileSync('lock', 'utf8');
+			console.log('lock unsuccessful', lockVal);
+			return lockVal;
+		}
+		catch (e) {
+			console.log('lock successful', name, e);
+			fs.writeFileSync('lock', name);
+			return true;
+		}
+	}
+
+	/**
+	 * Снять блокировку
+	 * @returns {boolean} True - успешно снята
+	 */
+	function unlock() {
+		try {
+			fs.lstatSync('lock');
+			fs.unlinkSync('lock');
+			console.log('unlock successful');
+			return true;
+		}
+		catch (e) {
+			console.log('unlock half-successful', e);
+			return true;
+		}
+	}
+
+	/**
+	 * Выдает ошибку о том, что сборщик заблокирован
+	 */
+	function throwLocked(name) {
+		console.log('throwLocked', name);
+		throw 'Сборщик уже кем-то используется.' + (name ? ' IP: ' + name +'.' : '');
+	}
+		
 	return {
 		initAll: initAll,
 		initAllIfNeeded: initAllIfNeeded,
@@ -1004,7 +1048,10 @@ var helper = helper || (function () {
 		cleanFilesTempDir: cleanFilesTempDir,
 		pushToSvn: pushToSvn,
 		getFilesDirByRepoAlias: getFilesDirByRepoAlias,
-		sequentialPromises: sequentialPromises
+		sequentialPromises: sequentialPromises,
+		lock: lock,
+		unlock: unlock,
+		throwLocked: throwLocked
 	};
 
 })();

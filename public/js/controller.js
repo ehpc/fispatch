@@ -22,7 +22,7 @@ var mainController = mainController || (function ($) {
 			dataType: 'json'
 		}).done(function (res) {
 			$def.resolve(res);
-		});
+		}).fail($def.reject);
 		return $def.promise();
 	};
 
@@ -34,7 +34,7 @@ var mainController = mainController || (function ($) {
 		var $def = $.Deferred();
 		$.get('/api/settings').done(function (res) {
 			$def.resolve(res);
-		});
+		}).fail($def.reject);
 		return $def.promise();
 	};
 
@@ -52,7 +52,7 @@ var mainController = mainController || (function ($) {
 			dataType: 'json'
 		}).done(function (res) {
 			$def.resolve(res);
-		});
+		}).fail($def.reject);
 		return $def.promise();
 	};
 
@@ -67,7 +67,22 @@ var mainController = mainController || (function ($) {
 			url: '/api/settings'
 		}).done(function (res) {
 			$def.resolve(res);
-		});
+		}).fail($def.reject);
+		return $def.promise();
+	};
+
+	/**
+	 * Принудительно забирает блокировку
+	 * @returns {*}
+	 */
+	var forceLock = function () {
+		var $def = $.Deferred();
+		$.ajax({
+			type: 'GET',
+			url: '/api/lock/force'
+		}).done(function (res) {
+			$def.resolve(res);
+		}).fail($def.reject);
 		return $def.promise();
 	};
 
@@ -75,7 +90,8 @@ var mainController = mainController || (function ($) {
 		getSettings: getSettings,
 		setSettings: setSettings,
 		resetSettings: resetSettings,
-		makePatch: makePatch
+		makePatch: makePatch,
+		forceLock: forceLock
 	};
 
 })(jQuery);
