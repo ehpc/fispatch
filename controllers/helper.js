@@ -444,7 +444,7 @@ var helper = helper || (function () {
 						destDir = path.dirname(path.join(filesTempDir, file));
 					asyncs1Cmd += 'mkdir -p "' + destDir + '"; ';
 					asyncs2Cmd += 'cp "' + source + '" "' + dest + '"; ';
-					stat += file + '$"\n" ';
+					stat += file.replace('" ', '') + '\n';
 					if (asyncs2Cmd.length > 100000) {
 						asyncs2Cmds.push(asyncs2Cmd);
 						asyncs2Cmd = '';
@@ -482,12 +482,19 @@ var helper = helper || (function () {
 				return Q.all(promises);
 			})
 			.then(function () {
-				console.log('Пишем статистику в version.txt');
 				if (repository.withVersion) {
-					return exec(
-						'echo patchName: ' + patchName + '$"\n"end revision: ' + revs.endRev + '$"\n"' +
-						'-------------- Changed files-----------------$"\n" ' +
-						stat + '----------------------------- > ' + filesTempDir + '/version.txt', execOptions
+					console.log('Пишем статистику в version.txt');
+					return sequentialPromises(
+						function () {
+							return exec('echo patchName: ' + patchName + '$"\n"end revision: ' + revs.endRev + '$"\n"' +
+								'-------------- Changed files-----------------$"\n" > ' + filesTempDir + '/version.txt', execOptions);
+						},
+						function () {
+							return exec('cat logs/stat.txt >> ' + filesTempDir + '/version.txt', execOptions);
+						},
+						function () {
+							return exec('echo ----------------------------- >> ' + filesTempDir + '/version.txt', execOptions);
+						}
 					);
 				}
 				else {
