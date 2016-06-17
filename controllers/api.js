@@ -11,7 +11,8 @@ var router = require('express').Router(),
 	Q = require('q'),
 	path = require('path'),
 	readFile = Q.denodeify(fs.readFile),
-	helper = require('controllers/helper');
+	helper = require('controllers/helper'),
+	exec = require('child_process').exec;
 
 function getSettingsByAlias(settings, alias) {
 	var i;
@@ -206,6 +207,19 @@ router
 	.get('/api/lock/force', function (req, res) {
 		helper.unlock();
 		console.log('lock forced successfully');
+		res.send('ok');
+	})
+	
+	.get('/api/restart', function (req, res) {
+		console.log('Restarting server');
+		exec('./restart.sh&', function (error, stdout, stderr) {
+			if (error) {
+				console.error('exec error: ' + error);
+				return;
+			}
+			console.log('stdout: ' + stdout);
+			console.log('stderr: ' + stderr);
+		});
 		res.send('ok');
 	});
 

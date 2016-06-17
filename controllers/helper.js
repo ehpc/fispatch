@@ -419,7 +419,7 @@ var helper = helper || (function () {
 			asyncs1 = [],
 			asyncs2 = [],
 			cmdParts = 10,
-			asyncs1Cmd = '',
+			asyncs1Cmds = [],
 			asyncs2Cmds = [],
 			stat = '';
 		// Получаем изменённые файлы
@@ -436,7 +436,7 @@ var helper = helper || (function () {
 			})
 			.then(function () {
 				console.log('Создали временную директорию «' + filesTempDir + '»');
-				var deferred1 = Q.defer(), asyncs2Cmd = '';
+				var defers = [], promises = [], asyncs1Cmd = '', asyncs2Cmd = '', i;
 				// Копируем файлы, создавая необходимые директории
 				changedFiles.forEach(function (file) {
 					var source = path.join(repositoryPath, file).replace('$', '\\$'),
@@ -449,19 +449,34 @@ var helper = helper || (function () {
 						asyncs2Cmds.push(asyncs2Cmd);
 						asyncs2Cmd = '';
 					}
+					if (asyncs1Cmd.length > 100000) {
+						asyncs1Cmds.push(asyncs1Cmd);
+						asyncs1Cmd = '';
+					}
 				});
 				// Добавляем остатки
 				if (asyncs2Cmd) {
 					asyncs2Cmds.push(asyncs2Cmd);
 				}
+				if (asyncs1Cmd) {
+					asyncs1Cmds.push(asyncs1Cmd);
+				}
 				fs.writeFileSync('logs/stat.txt', stat);
-				childProcess.exec(asyncs1Cmd, execOptions, function (error, stdout, stderr) {
-					console.log('asyncs1Cmd DONE');
-					fs.writeFileSync('logs/asyncs1Cmd.txt', asyncs1Cmd + '\n\n>>>\n' + error + '\n\n>>>\n' + stdout + '\n\n>>>\n' + stderr);
-					deferred1.resolve(true);
-				});
+				console.log('Количество суб-процессов для создания директорий: ' + asyncs1Cmds.length);
+				function exeCbWrapper(defer, i) {
+					return function execCb(error, stdout, stderr) {
+						console.log('asyncs1Cmd' + i + ' DONE');
+						fs.writeFileSync('logs/asyncs1Cmd' + i + '.txt', asyncs1Cmds[i] + '\n\n>>>\n' + error + '\n\n>>>\n' + stdout + '\n\n>>>\n' + stderr);
+						defer.resolve(true);
+					};
+				}
+				for (i = 0; i < asyncs1Cmds.length; i++) {
+					defers[i] = Q.defer();
+					promises[i] = defers[i].promise;
+					childProcess.exec(asyncs1Cmds[i], execOptions, exeCbWrapper(defers[i], i));
+				}
 				console.log('Создаём структуру директорий');
-				return deferred1.promise;
+				return Q.all(promises);
 			})
 			.then(function () {
 				var defers = [], promises = [], i;
