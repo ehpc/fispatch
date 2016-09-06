@@ -189,6 +189,17 @@
 				}
 			});
 		}
+		
+		// Удаляет файл
+		$('.deleteFile').on('click', function () {
+			var $tr = $(this).closest('tr'),
+				name = $tr.find('.fileLink').text();
+			mainController.deleteFile(name).done(function () {
+				$tr.remove();
+			}).fail(function () {
+
+			});
+		});
 	});
 
 })(jQuery);

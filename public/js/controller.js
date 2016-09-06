@@ -7,6 +7,10 @@
 var mainController = mainController || (function ($) {
 	'use strict';
 
+	$.ajaxSetup({
+	  timeout: 0
+	});
+	
 	/**
 	 * Создать патч
 	 * @param type Тип патча [patch, distrib, patch_download, distrib_download]
@@ -86,12 +90,31 @@ var mainController = mainController || (function ($) {
 		return $def.promise();
 	};
 
+	/**
+	 * Удаляет собранный файл
+	 * @returns {*}
+	 */
+	var deleteFile = function (name) {
+		var $def = $.Deferred();
+		$.ajax({
+			type: 'GET',
+			url: '/api/delete',
+			data: {
+				fileName: name
+			}
+		}).done(function (res) {
+			$def.resolve(res);
+		}).fail($def.reject);
+		return $def.promise();
+	};
+
 	return {
 		getSettings: getSettings,
 		setSettings: setSettings,
 		resetSettings: resetSettings,
 		makePatch: makePatch,
-		forceLock: forceLock
+		forceLock: forceLock,
+		deleteFile: deleteFile
 	};
 
 })(jQuery);

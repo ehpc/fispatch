@@ -28,7 +28,7 @@ router
 	// Создание патча
 	.post('/api/make-patch', function (req, res) {
 		var lock = helper.lock(req.ip);
-		if (lock === true) {
+		if (true) {
 			var data = req.body,
 				downloadsDir = path.join(__dirname, '..', 'downloads');
 			console.log('Директория загрузок: «' + downloadsDir + '»');
@@ -220,6 +220,19 @@ router
 			console.log('stdout: ' + stdout);
 			console.log('stderr: ' + stderr);
 		});
+		res.send('ok');
+	})
+
+	// Удаляет собранный файл
+	.get('/api/delete', function (req, res) {
+		console.log('Deleting file', 'rm -f downloads/' + req.query.fileName);
+		if (req.query.fileName) {
+			exec('rm -f downloads/' + req.query.fileName, function (error, stdout, stderr) {
+				if (error) {
+					console.error('exec error: ' + error);
+				}
+			});
+		}
 		res.send('ok');
 	});
 

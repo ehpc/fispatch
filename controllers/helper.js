@@ -1025,6 +1025,9 @@ var helper = helper || (function () {
 			fs.lstatSync('lock');
 			var lockVal = fs.readFileSync('lock', 'utf8');
 			console.log('lock unsuccessful', lockVal);
+			var stack = new Error().stack;
+			console.log(stack);
+			console.trace();
 			return lockVal;
 		}
 		catch (e) {

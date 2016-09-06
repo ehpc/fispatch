@@ -74,3 +74,25 @@ block content
 				.row.mt15
 					.col-md-12
 						button#buttonResetSettings.btn.btn-danger.btn-block(type="button") Сбросить настройки и репозитории
+		.panel.panel-default
+			.panel-body
+				// Ссылки на собранные файлы
+				.row
+					.col-md-12
+						table.table
+							caption Последние сборки
+							thead
+								tr
+									th #
+									th Ссылка
+									th Размер
+									th
+							tbody
+								each file, i in files
+									tr
+										td #{i + 1}
+										td
+											a.fileLink(href='/shared/' + file.name) #{file.name}
+										td #{file.size}
+										td.text-right
+											button.deleteFile.btn.btn-default.btn-xs(type=button) удалить

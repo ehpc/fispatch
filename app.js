@@ -11,6 +11,7 @@ var path = require('path'); // Модуль работы с путями
 var logger = require('morgan'); // Логирование для express
 var bodyParser = require('body-parser'); // Для работы с POST-запросами
 var fs = require('fs');
+var timeout = require('connect-timeout');
 
 console.log = function () {
 	var currentdate = new Date(),
@@ -26,6 +27,7 @@ console.log = function () {
 // Создаём наше серверное приложение
 var app = express();
 
+app.use(timeout('3600s'));
 // Настраиваем view
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
