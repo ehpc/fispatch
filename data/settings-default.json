@@ -44,8 +44,8 @@
 			}
 		},
 		{
-			"address": "http://mercurial.fisgroup.ru/fcs/Server/Schemas/",
-			"alias": "oracleSchemas",
+			"address": "http://mercurial.fisgroup.ru/fcs/Server/Modules/Sec_subsystem/",
+			"alias": "sec_subsystem",
 			"cloneRev": "0",
 			"revisionsLimit": "50",
 			"hgFilter": "and not grep(Слияние)",
@@ -86,13 +86,6 @@
 					}
 				}
 			}
-		},
-		{
-			"address": "http://mercurial.fisgroup.ru/fcs/Server/Scripts/",
-			"alias": "oracleScripts",
-			"cloneRev": "0",
-			"revisionsLimit": "50",
-			"hidden": true
 		}
 	],
 	"temp": "/srv/www/temp",
