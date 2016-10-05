@@ -840,7 +840,9 @@ var helper = helper || (function () {
 				tempDir = settings.temp,
 				asyncs = [];
 			settings.repositories.forEach(function (repo) {
-				asyncs.push(updateRepo(repo, tempDir));
+				if (repo.update !== false) {
+					asyncs.push(updateRepo(repo, tempDir));
+				}
 			});
 			Q.all(asyncs).done(function () {
 				deferred.resolve(null);

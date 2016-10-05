@@ -109,7 +109,7 @@ var web = web || (function () {
 
 					console.log('Составляем список файлов, из которых состоит дистрибутив. ');
 					console.log('find ' + distribDir + ' -type f | sort');
-					exec('find ' + distribDir + ' -type f | sort').then(function (res) {
+					return exec('find ' + distribDir + ' -type f | sort', execOptions).then(function (res) {
 						if (options.fileList) {
 							res[0] += options.fileList.reduce(function (acc, x) {
 								return acc + distribDir + '/' + x + '\n';
@@ -124,7 +124,10 @@ var web = web || (function () {
 					}).then(function () {
 						console.log('beforeDownload успешно завершён.');
 						resolve();
-					}).fail(reject);
+					}).fail(function (error) {
+						console.log('Error', error);
+						reject(error);
+					});
 					/*helper.sequentialPromises(
 						function () {
 							console.log('Вычисляем хеш-суммы файлов патча. ', 'find ' + patchDir + ' -type f -print0 | sort -z | xargs -0 -I {} sh -c \'stat --printf="%Y " {}; sha1sum {};\'');
