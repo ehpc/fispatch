@@ -25,7 +25,7 @@ var helper = helper || (function () {
 		childProcess = require('child_process'),
 		exec = Q.denodeify(childProcess.exec),
 		readFile = Q.denodeify(fs.readFile),
-		colorsModule = require('controllers/colors'),
+		colorsModule = require('./colors'),
 		execOptions = {
 			maxBuffer: 250000
 		},
@@ -700,7 +700,8 @@ var helper = helper || (function () {
 					 				desc: 'Description',
 					 				parent1: 234234ghj243g43432k4h3j2
 					 			}, ...
-							]
+							],
+							settings: {}
 						}
 					}
 					*/
@@ -723,7 +724,8 @@ var helper = helper || (function () {
 								data[repository.alias] = {
 									branches: [],
 									branchesMetadata: {},
-									revisions: []
+									revisions: [],
+									settings: repository
 								};
 							}
 							// Добавляем ветки

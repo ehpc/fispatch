@@ -11,7 +11,7 @@ var router = require('express').Router(),
 	Q = require('q'),
 	path = require('path'),
 	readFile = Q.denodeify(fs.readFile),
-	helper = require('controllers/helper'),
+	helper = require('./helper'),
 	exec = require('child_process').exec;
 
 function getSettingsByAlias(settings, alias) {
@@ -95,9 +95,9 @@ router
 										if (repoSettings.beforeDownload) {
 											console.log('Для репозитория ' + repo.alias + ' существует обработчик beforeDownload');
 											beforeDownloadAsyncs.push(Q.Promise(function (resolve, reject) {
-												console.log('require(controllers/' + repoSettings.beforeDownload.controller + ')');
+												console.log('require(./' + repoSettings.beforeDownload.controller + ')');
 												// Находим контроллер, в котором реализован beforeDownload
-												var controller = require('controllers/' + repoSettings.beforeDownload.controller);
+												var controller = require('./' + repoSettings.beforeDownload.controller);
 												if (controller && typeof controller[repoSettings.beforeDownload.action] === 'function') {
 													// Находим экшн контроллера
 													controller[repoSettings.beforeDownload.action](repoSettings.beforeDownload.options, repoSettings, repo, data).then(function () {

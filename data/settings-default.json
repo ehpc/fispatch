@@ -4,7 +4,7 @@
 		{
 			"address": "http://mercurial.fisgroup.ru/fcs/web/akbarsweb/",
 			"alias": "fcs",
-			"cloneRev": "4162",
+			"cloneRev": "10100",
 			"revisionsLimit": "50",
 			"withVersion": true,
 			"update": false,
@@ -12,6 +12,10 @@
 				"controller": "web",
 				"action": "beforeDownload",
 				"options": {
+					"fileList": [
+						"xsl/base-uri-def.xsl",
+						"js/properties/extend.js"
+					]
 				}
 			}
 		},
@@ -45,8 +49,8 @@
 			}
 		},
 		{
-			"address": "http://mercurial.fisgroup.ru/fcs/Server/Modules/Sec_subsystem/",
-			"alias": "sec_subsystem",
+			"address": "http://mercurial.fisgroup.ru/fcs/Server/Schemas",
+			"alias": "schemas",
 			"cloneRev": "0",
 			"revisionsLimit": "50",
 			"hgFilter": "and not grep(Слияние)",
@@ -89,9 +93,9 @@
 			}
 		}
 	],
-	"temp": "/srv/www/temp",
+	"temp": "/root/fispatch/temp",
 	"svn": "svn://svn/satc.dev/FCS/Patches/DISTRIBUTION",
 	"svnWebDirName": "web",
-	"hgCommand": "/root/bin/hg",
+	"hgCommand": "hg",
 	"processMaxBuffer": "5000000"
 }

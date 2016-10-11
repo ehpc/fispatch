@@ -12,7 +12,7 @@ var web = web || (function () {
 		 Q.denodeify превращает обычную node.js функцию в промис.
 		 */
 
-		var helper = require('controllers/helper'),
+		var helper = require('./helper'),
 			Q = require('q'),
 			fs = require('fs'),
 			path = require('path'),

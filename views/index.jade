@@ -34,7 +34,7 @@ block content
 							.col-md-2
 								.checkbox
 									label
-										if (repoName === 'oracleSchemas')
+										if (repoData.settings.withDistrib !== true)
 											input.isDistrib(type="checkbox", value="distrib")
 										else
 											input.isDistrib(type="checkbox", value="distrib", disabled, checked)

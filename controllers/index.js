@@ -7,7 +7,7 @@
 'use strict';
 
 var router = require('express').Router(),
-	helper = require('controllers/helper'),
+	helper = require('./helper'),
 	Q = require('q'),
 	fs = require('fs'),
 	childProcess = require('child_process'),
