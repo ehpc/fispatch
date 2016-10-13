@@ -91,6 +91,13 @@
 					}
 				}
 			}
+		},
+		{
+			"address": "http://mercurial.fisgroup.ru/fcs/Server/Scripts/",
+			"alias": "oracleScripts",
+			"cloneRev": "0",
+			"revisionsLimit": "50",
+			"hidden": true
 		}
 	],
 	"temp": "/root/fispatch/temp",

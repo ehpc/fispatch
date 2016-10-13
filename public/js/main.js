@@ -117,9 +117,9 @@
 
 		// Кнопка сохранения настроек
 		$('#buttonSaveSettings').on('click', function () {
-			confirm('Вы уверены, что хотите сохранить настройки?', function () {
+			if (confirm('Вы уверены, что хотите сохранить настройки?')) {
 				waitingDialog.show('Сохраняем настройки...');
-				mainController.setSettings(JSON.parse($formSettings.val())).done(function () {
+				mainController.setSettings($formSettings.val()).then(function () {
 					waitingDialog.hide();
 					location.reload();
 				}).fail(function (err) {
@@ -127,12 +127,12 @@
 					waitingDialog.hide();
 					alert('Ошибка при сохранении настроек.' + err.responseText);
 				});
-			});
+			}
 		});
 
 		// Кнопка сброса настроек
 		$('#buttonResetSettings').on('click', function () {
-			confirm('Вы уверены, что хотите сбросить настройки?', function () {
+			if (confirm('Вы уверены, что хотите сбросить настройки?')) {
 				waitingDialog.show('Сбрасываем настройки...');
 				mainController.resetSettings().done(function () {
 					location.reload();
@@ -141,7 +141,7 @@
 					waitingDialog.hide();
 					alert('Ошибка при сбрасывании настроек.' + err.responseText);
 				});
-			});
+			}
 		});
 
 		/**

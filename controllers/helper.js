@@ -842,9 +842,7 @@ var helper = helper || (function () {
 				tempDir = settings.temp,
 				asyncs = [];
 			settings.repositories.forEach(function (repo) {
-				if (repo.update !== false) {
-					asyncs.push(updateRepo(repo, tempDir));
-				}
+				asyncs.push(updateRepo(repo, tempDir));
 			});
 			Q.all(asyncs).done(function () {
 				deferred.resolve(null);
@@ -952,7 +950,10 @@ var helper = helper || (function () {
 			// Инициализируем все репозитории
 			for (i = 0; i < settings.repositories.length; i++) {
 				var repository = settings.repositories[i];
-				asyncs.push(initRepo(repository));
+				if (repository.doNotClone !== true) {
+					console.log('>>>>>init', repository.alias);
+					asyncs.push(initRepo(repository));
+				}
 			}
 
 			// Инициализируем svn
@@ -975,9 +976,12 @@ var helper = helper || (function () {
 			}());*/
 
 			// Выполняем всё асинхронно
-			Q.all(asyncs).done(function () {
+			Q.all(asyncs).then(function () {
 				console.log('Инициализация репозиториев завершена');
 				deferred.resolve(null);
+			}).fail(function (err) {
+				console.log(err);
+				deferred.reject(err);
 			});
 		});
 		return deferred.promise;

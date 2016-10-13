@@ -98,6 +98,7 @@ router
 												console.log('require(./' + repoSettings.beforeDownload.controller + ')');
 												// Находим контроллер, в котором реализован beforeDownload
 												var controller = require('./' + repoSettings.beforeDownload.controller);
+												console.log('required.');
 												if (controller && typeof controller[repoSettings.beforeDownload.action] === 'function') {
 													// Находим экшн контроллера
 													controller[repoSettings.beforeDownload.action](repoSettings.beforeDownload.options, repoSettings, repo, data).then(function () {
@@ -124,7 +125,10 @@ router
 												console.log('Создаем архив');
 												resolve(helper.createArchive(data.patchData.name, downloadsDir));
 											})
-											.fail(reject);
+											.fail(function (err) {
+												console.log(err);
+												reject(err);
+											});
 									});
 								})
 								.then(function (archName) {
@@ -162,13 +166,15 @@ router
 	.post('/api/settings', function (req, res) {
 		var lock = helper.lock(req.ip);
 		if (lock === true) {
-			fs.writeFile('data/settings.json', JSON.stringify(req.body), function (err) {
+			fs.writeFile('data/settings.json', req.body.settings, function (err) {
 				if (err) {
 					throw err;
 				}
 				// После сохранения заново инициализируем приложение
-				helper.initAll().done(function () {
+				helper.initAll().then(function () {
 					res.json({status: 'ok'});
+				}).fail(function (err) {
+					console.log(err);
 				});
 			});
 		}

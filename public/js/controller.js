@@ -44,17 +44,19 @@ var mainController = mainController || (function ($) {
 
 	/**
 	 * Записать текущие настройки
-	 * @param jsonData Новые настройки в формате JSON
+	 * @param data Новые настройки
 	 * @returns {Promise}
 	 */
-	var setSettings = function (jsonData) {
+	var setSettings = function (data) {
 		var $def = $.Deferred();
 		$.ajax({
 			type: 'POST',
 			url: '/api/settings',
-			data: jsonData,
+			data: {
+				settings: data
+			},
 			dataType: 'json'
-		}).done(function (res) {
+		}).then(function (res) {
 			$def.resolve(res);
 		}).fail($def.reject);
 		return $def.promise();
