@@ -1,13 +1,13 @@
 {
-	"repositories":
-	[
+	"repositories": [
 		{
 			"address": "http://mercurial.fisgroup.ru/fcs/web/akbarsweb/",
 			"alias": "fcs",
 			"cloneRev": "10100",
 			"revisionsLimit": "50",
 			"withVersion": true,
-			"update": false,
+			"withDistrib": true,
+			"doNotClone": true,
 			"beforeDownload": {
 				"controller": "web",
 				"action": "beforeDownload",
@@ -25,26 +25,17 @@
 			"cloneRev": "88",
 			"revisionsLimit": "50",
 			"withVersion": true,
-			"exclude" : [
+			"withDistrib": true,
+			"exclude": [
 				"process.ini"
 			],
 			"beforeDownload": {
 				"controller": "web",
 				"action": "beforeDownload",
 				"options": {
-				}
-			}
-		},
-		{
-			"address": "http://mercurial.fisgroup.ru/fcs/web/colweb/",
-			"alias": "collectors",
-			"cloneRev": "210",
-			"revisionsLimit": "50",
-			"withVersion": true,
-			"beforeDownload": {
-				"controller": "web",
-				"action": "beforeDownload",
-				"options": {
+					"fileList": [
+						"process.ini"
+					]
 				}
 			}
 		},
@@ -54,7 +45,7 @@
 			"cloneRev": "0",
 			"revisionsLimit": "50",
 			"hgFilter": "and not grep(Слияние)",
-			"exclude" : [
+			"exclude": [
 				"schemas_definition"
 			],
 			"beforeDownload": {

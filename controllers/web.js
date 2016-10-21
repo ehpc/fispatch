@@ -110,7 +110,7 @@ var web = web || (function () {
 					console.log('Составляем список файлов, из которых состоит дистрибутив. ');
 					console.log('find ' + distribDir + ' -type f | sort');
 					return exec('find ' + distribDir + ' -type f | sort', execOptions).then(function (res) {
-						if (options.fileList) {
+						if (options && options.fileList) {
 							res[0] += options.fileList.reduce(function (acc, x) {
 								return acc + distribDir + '/' + x + '\n';
 							}, '');
