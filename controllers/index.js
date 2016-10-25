@@ -41,6 +41,7 @@ router.get('/', function (req, res) {
 			// Рендерим интерфейс
 			res.render('index', {
 				ip: req.ip,
+				date: new Date().toLocaleString(),
 				reposData: data[0],
 				settings: JSON.stringify(data[1], null, 4),
 				files: files,

@@ -36,7 +36,6 @@ var helper = helper || (function () {
 		var settings = JSON.parse(data);
 		hgCommand = settings.hgCommand;
 		execOptions.maxBuffer = settings.processMaxBuffer;
-		console.log('maxBuffer', execOptions.maxBuffer);
 	});
 
 	/**

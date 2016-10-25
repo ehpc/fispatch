@@ -12,6 +12,7 @@ var logger = require('morgan'); // Логирование для express
 var bodyParser = require('body-parser'); // Для работы с POST-запросами
 var fs = require('fs');
 var timeout = require('connect-timeout');
+var cron = require('./controllers/cron');
 
 console.log = function () {
 	var currentdate = new Date(),
@@ -46,6 +47,8 @@ app.use('/shared/', express.static(path.join(__dirname, 'downloads')));
 app.use('/', require('./controllers/index'));
 app.use('/', require('./controllers/api'));
 
+// Планировщик задач
+cron.start();
 
 // Отлавливаем ошибки
 app.use(function (req, res, next) {

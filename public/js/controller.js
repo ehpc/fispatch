@@ -120,7 +120,7 @@ var mainController = mainController || (function ($) {
 		return $.ajax({
 			type: 'GET',
 			url: '/queue'
-		})
+		});
 	};
 
 	/**
@@ -133,7 +133,7 @@ var mainController = mainController || (function ($) {
 			data: {
 				id: id
 			}
-		})
+		});
 	};
 
 	return {

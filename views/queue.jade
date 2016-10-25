@@ -23,5 +23,4 @@
 								td #{item.taskCreator}
 								td #{item.taskStatus}
 								td.text-right
-									if (item.status !== 'processing')
-										button.deleteFromQueue.btn.btn-default.btn-xs(type=button, data-id="#{item.id}") удалить
+									button.deleteFromQueue.btn.btn-default.btn-xs(type=button, data-id="#{item.id}", data-status="#{item.status}") удалить

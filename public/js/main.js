@@ -209,15 +209,24 @@
 
 		// Удаляет из очереди
 		$body.on('click', '.deleteFromQueue', function () {
-			var $this = $(this);
-			mainController.deleteFromQueue($this.data('id')).then(function () {
-				$this.closest('tr').remove();
-			}).fail(function () {
-				console.error(arguments);
-				alert('Ошибка при удалении.');
-			});
+			if (confirm('Действительно удалить из очереди?')) {
+				deleteFromQueue($(this));
+			}
 		});
 	});
+
+	/**
+	 * Удаляет из очереди
+	 * @param $this
+	 */
+	function deleteFromQueue($this) {
+		mainController.deleteFromQueue($this.data('id')).then(function () {
+			$this.closest('tr').remove();
+		}).fail(function () {
+			console.error(arguments);
+			alert('Ошибка при удалении.');
+		});
+	}
 
 	/**
 	 * Обновляет очередь
@@ -230,6 +239,9 @@
 			alert('Ошибка при обновлении очереди.');
 		});
 	}
+
+	// Автоматическое обновление очереди
+	setInterval(reloadQueueList, 5000);
 
 })(jQuery);
 

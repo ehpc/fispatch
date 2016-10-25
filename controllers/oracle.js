@@ -238,7 +238,7 @@ var oracle = oracle || (function () {
 			if (replacements && replacements.length) {
 				for (i = 0; i < replacements.length; i++) {
 					to = replacements[i].to;
-					to = to.replace(/__NAME__/img, patchData.patchData.name);
+					to = to.replace(/__NAME__/img, patchData.name);
 					if (snapshotSettings.branch) {
 						to = to.replace(/__BRANCH__/img, snapshotSettings.branch);
 						to = to.replace(/__PATCH__/img, snapshotSettings.branch.replace(/[^0-9.]/img, ''));
