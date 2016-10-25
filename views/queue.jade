@@ -1,0 +1,27 @@
+#queue.panel.panel-default
+	.panel-body
+		// Очередь заданий
+		.row
+			.col-md-12
+				h4 Очередь заданий
+				button.reloadQueueList.btn.btn-default.btn-xs.btn-right(type=button) Обновить список очереди
+				table.table
+					thead
+						tr
+							th #
+							th Тип задания
+							th Дата создания
+							th Инициатор
+							th Статус
+							th
+					tbody
+						each item, i in queue
+							tr
+								td #{i + 1}
+								td #{item.taskName}
+								td #{item.taskDate}
+								td #{item.taskCreator}
+								td #{item.taskStatus}
+								td.text-right
+									if (item.status !== 'processing')
+										button.deleteFromQueue.btn.btn-default.btn-xs(type=button, data-id="#{item.id}") удалить

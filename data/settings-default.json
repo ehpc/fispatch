@@ -1,7 +1,7 @@
 {
 	"repositories": [
 		{
-			"address": "http://mercurial.fisgroup.ru/fcs/web/akbarsweb/",
+			"address": "http://fcs-mercurial.fisgroup.ru/web/akbarsweb/",
 			"alias": "fcs",
 			"cloneRev": "10100",
 			"revisionsLimit": "50",
@@ -20,7 +20,7 @@
 			}
 		},
 		{
-			"address": "http://mercurial.fisgroup.ru/fcs/web/v3/",
+			"address": "http://fcs-mercurial.fisgroup.ru/web/v3/",
 			"alias": "v3",
 			"cloneRev": "88",
 			"revisionsLimit": "50",
@@ -40,7 +40,7 @@
 			}
 		},
 		{
-			"address": "http://mercurial.fisgroup.ru/fcs/Server/Schemas",
+			"address": "http://fcs-mercurial.fisgroup.ru/Server/Schemas",
 			"alias": "schemas",
 			"cloneRev": "0",
 			"revisionsLimit": "50",
@@ -84,7 +84,7 @@
 			}
 		},
 		{
-			"address": "http://mercurial.fisgroup.ru/fcs/Server/Scripts/",
+			"address": "http://fcs-mercurial.fisgroup.ru/Server/Scripts/",
 			"alias": "oracleScripts",
 			"cloneRev": "0",
 			"revisionsLimit": "50",

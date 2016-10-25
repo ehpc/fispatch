@@ -21,8 +21,11 @@ var mainController = mainController || (function ($) {
 		var $def = $.Deferred();
 		$.ajax({
 			type: 'POST',
-			url: '/api/make-patch',
-			data: {type: type, patchData: data},
+			url: '/api/queue/add',
+			data: {
+				type: 'make-patch',
+				data: data
+			},
 			dataType: 'json'
 		}).done(function (res) {
 			$def.resolve(res);
@@ -110,13 +113,38 @@ var mainController = mainController || (function ($) {
 		return $def.promise();
 	};
 
+	/**
+	 * Обновляет список очереди
+	 */
+	var reloadQueueList = function () {
+		return $.ajax({
+			type: 'GET',
+			url: '/queue'
+		})
+	};
+
+	/**
+	 * Удаляет элемент очереди
+	 */
+	var deleteFromQueue = function (id) {
+		return $.ajax({
+			type: 'POST',
+			url: '/api/queue/delete',
+			data: {
+				id: id
+			}
+		})
+	};
+
 	return {
 		getSettings: getSettings,
 		setSettings: setSettings,
 		resetSettings: resetSettings,
 		makePatch: makePatch,
 		forceLock: forceLock,
-		deleteFile: deleteFile
+		deleteFile: deleteFile,
+		reloadQueueList: reloadQueueList,
+		deleteFromQueue: deleteFromQueue
 	};
 
 })(jQuery);

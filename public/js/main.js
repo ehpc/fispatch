@@ -106,7 +106,8 @@
 				waitingDialog.show('Собираем патч...');
 				mainController.makePatch('patch_download', data).done(function (res) {
 					waitingDialog.hide();
-					info('Патч «' + res.name + '» доступен по ссылке: <a href="' + res.url + '">' + res.url + '</a>');
+					reloadQueueList();
+					info('Задание добавлено в очередь.');
 				}).fail(function (err) {
 					console.error(err);
 					waitingDialog.hide();
@@ -194,13 +195,41 @@
 		$('.deleteFile').on('click', function () {
 			var $tr = $(this).closest('tr'),
 				name = $tr.find('.fileLink').text();
-			mainController.deleteFile(name).done(function () {
+			mainController.deleteFile(name).then(function () {
 				$tr.remove();
 			}).fail(function () {
+				console.error(arguments);
+				alert('Ошибка при удалении файла.');
+			});
+		});
 
+		var $body = $('body');
+		// Обновляет очередь
+		$body.on('click', '.reloadQueueList', reloadQueueList);
+
+		// Удаляет из очереди
+		$body.on('click', '.deleteFromQueue', function () {
+			var $this = $(this);
+			mainController.deleteFromQueue($this.data('id')).then(function () {
+				$this.closest('tr').remove();
+			}).fail(function () {
+				console.error(arguments);
+				alert('Ошибка при удалении.');
 			});
 		});
 	});
+
+	/**
+	 * Обновляет очередь
+	 */
+	function reloadQueueList() {
+		mainController.reloadQueueList().then(function (html) {
+			$('#queue').replaceWith(html);
+		}).fail(function () {
+			console.error(arguments);
+			alert('Ошибка при обновлении очереди.');
+		});
+	}
 
 })(jQuery);
 

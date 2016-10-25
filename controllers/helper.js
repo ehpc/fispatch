@@ -1069,7 +1069,7 @@ var helper = helper || (function () {
 		console.log('throwLocked', name);
 		throw 'Сборщик уже кем-то используется.' + (name ? ' IP: ' + name +'.' : '');
 	}
-		
+
 	return {
 		initAll: initAll,
 		initAllIfNeeded: initAllIfNeeded,

@@ -6,6 +6,25 @@ body {
 	margin-top: 15px;
 }
 
+.container {
+	position: relative;
+}
+
 p.bg-warning {
 	padding: 15px;
+}
+
+h4 {
+	float: left;
+}
+
+.btn-right {
+	margin-top: 10px;
+	float: right;
+}
+
+.topInfo {
+	position: absolute;
+	right: 15px;
+	top: 25px;
 }

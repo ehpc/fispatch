@@ -1,6 +1,7 @@
 extends layout
 block content
 	.container
+		span.topInfo Ваш IP: #{ip}
 		h1 Сборщик патчей FCS
 
 		#alertContainer
@@ -60,27 +61,14 @@ block content
 				.row.mt15
 					.col-md-12
 						button#buttonPatchDownload.btn.btn-primary.btn-block(type="button") Собрать патч и скачать архив
-		.panel.panel-default
-			.panel-body
-				// Поле настроек сборщика
-				.row
-					.col-md-12
-						.form-group
-							label(for="formSettings") Настройки
-							textarea#formSettings.form-control(rows="10") #{settings}
-				.row.mt15
-					.col-md-12
-						button#buttonSaveSettings.btn.btn-success.btn-block(type="button") Сохранить настройки
-				.row.mt15
-					.col-md-12
-						button#buttonResetSettings.btn.btn-danger.btn-block(type="button") Сбросить настройки и репозитории
+		include queue.jade
 		.panel.panel-default
 			.panel-body
 				// Ссылки на собранные файлы
 				.row
 					.col-md-12
+						h4 Последние сборки
 						table.table
-							caption Последние сборки
 							thead
 								tr
 									th #
@@ -96,3 +84,17 @@ block content
 										td #{file.size}
 										td.text-right
 											button.deleteFile.btn.btn-default.btn-xs(type=button) удалить
+		.panel.panel-default
+			.panel-body
+				// Поле настроек сборщика
+				.row
+					.col-md-12
+						.form-group
+							label(for="formSettings") Настройки
+							textarea#formSettings.form-control(rows="10") #{settings}
+				.row.mt15
+					.col-md-12
+						button#buttonSaveSettings.btn.btn-success.btn-block(type="button") Сохранить настройки
+				.row.mt15
+					.col-md-12
+						button#buttonResetSettings.btn.btn-danger.btn-block(type="button") Сбросить настройки и репозитории
