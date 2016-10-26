@@ -124,6 +124,26 @@ var mainController = mainController || (function ($) {
 	};
 
 	/**
+	 * Обновляет список файлов
+	 */
+	var reloadDownloadsList = function () {
+		return $.ajax({
+			type: 'GET',
+			url: '/downloads'
+		});
+	};
+
+	/**
+	 * Считывает серверное время
+	 */
+	var reloadServerTime = function () {
+		return $.ajax({
+			type: 'GET',
+			url: '/server-time'
+		});
+	};
+
+	/**
 	 * Удаляет элемент очереди
 	 */
 	var deleteFromQueue = function (id) {
@@ -144,7 +164,9 @@ var mainController = mainController || (function ($) {
 		forceLock: forceLock,
 		deleteFile: deleteFile,
 		reloadQueueList: reloadQueueList,
-		deleteFromQueue: deleteFromQueue
+		deleteFromQueue: deleteFromQueue,
+		reloadServerTime: reloadServerTime,
+		reloadDownloadsList: reloadDownloadsList
 	};
 
 })(jQuery);

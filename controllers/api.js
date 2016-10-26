@@ -16,16 +16,6 @@ var router = require('express').Router(),
 	proc = require('./proc'),
 	exec = require('child_process').exec;
 
-function getSettingsByAlias(settings, alias) {
-	var i;
-	for (i = 0; i < settings.repositories.length; i++) {
-		if (settings.repositories[i].alias === alias) {
-			return settings.repositories[i];
-		}
-	}
-	return null;
-}
-
 router
 
 	// Добавление задания в очередь
@@ -36,6 +26,7 @@ router
 				data: req.body.data
 			},
 			settings = JSON.parse(fs.readFileSync('data/settings.json', 'utf8'));
+		queueData.type = req.body.type;
 		if (req.body.type === 'make-patch') {
 			queueData.taskName =
 				'Сборка патча "' + queueData.data.name + '"' +
@@ -46,8 +37,8 @@ router
 		}
 		queueData.taskDate = new Date(queueData.timestamp).toLocaleString();
 		queueData.taskCreator = settings.ipMap[req.ip] || req.ip;
-		console.log('Добавлено задание', queueData);
 		queue.add(queueData);
+		console.log('Добавлено задание', JSON.stringify(queueData));
 		res.json({
 			result: 'ok'
 		});

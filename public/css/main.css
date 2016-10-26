@@ -28,3 +28,8 @@ h4 {
 	right: 15px;
 	top: 15px;
 }
+
+a.error {
+	cursor: pointer;
+	color: #a94442;
+}

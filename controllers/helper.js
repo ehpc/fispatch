@@ -127,9 +127,13 @@ var helper = helper || (function () {
 									console.log('Копируем изменённые файлы репозитория «' + snapshotSettings.alias + '»');
 									return copyChangesFilesToTemp(repository, tempDir, revs, path.join(filesTempDirBase, 'patch', snapshotSettings.alias), patchName, snapshotSettings.branch);
 								})
-								.done(function () {
+								.then(function () {
 									console.log('Скопировали изменённые файлы репозитория «' + snapshotSettings.alias + '»');
-									deferred.resolve(null);
+									deferred.resolve(true);
+								})
+								.fail(function (err) {
+									console.error(err);
+									deferred.reject(err);
 								});
 						});
 					}
@@ -146,15 +150,19 @@ var helper = helper || (function () {
 									console.log('Копируем изменённые файлы репозитория «' + snapshotSettings.alias + '»');
 									return copyChangesFilesToTemp(repository, tempDir, snapshotSettings, path.join(filesTempDirBase, 'patch', snapshotSettings.alias), patchName);
 								})
-								.done(function () {
+								.then(function () {
 									console.log('Скопировали изменённые файлы репозитория «' + snapshotSettings.alias + '»');
-									deferred.resolve(null);
+									deferred.resolve(true);
+								})
+								.fail(function (err) {
+									console.error(err);
+									deferred.reject(err);
 								});
 						});
 					}
 					else {
 						console.log('Неверный формат сборки репозитория «' + snapshotSettings.alias + '»');
-						deferred.resolve(null);
+						deferred.resolve(true);
 					}
 				}
 			});

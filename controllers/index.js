@@ -14,30 +14,53 @@ var router = require('express').Router(),
 	childProcess = require('child_process'),
 	exec = Q.denodeify(childProcess.exec);
 
+/**
+ * Возвращает список файлов для загрузки
+ * @returns {*}
+ */
+function getDownloads() {
+	return exec('ls -t1sh downloads').then(function (out) {
+		return out[0].split('\n').map(function (line) {
+			var match = /\s*(\d+\w*)\s+([\s\S]+)/im.exec(line);
+			if (match !== null) {
+				return {
+					name: match[2],
+					size: match[1]
+				};
+			}
+			else {
+				return null;
+			}
+		}).filter(function (file) {
+			return file;
+		});
+	});
+}
+
 router.get('/queue', function (req, res) {
 	res.render('queue', {
 		queue: queue.list()
 	});
 });
 
+router.get('/server-time', function (req, res) {
+	res.render('server-time', {
+		date: new Date().toLocaleString()
+	});
+});
+
+router.get('/downloads', function (req, res) {
+	getDownloads().then(function (files) {
+		res.render('downloads', {
+			files: files
+		});
+	});
+});
+
 router.get('/', function (req, res) {
 	// Подгружаем данные репозиториев
-	Q.all([helper.getReposData(), helper.getSettings()]).done(function (data) {
-		exec('ls -t1sh downloads').done(function (out) {
-			var files = out[0].split('\n').map(function (line) {
-				var match = /\s*(\d+\w*)\s+([\s\S]+)/im.exec(line);
-				if (match !== null) {
-					return {
-						name: match[2],
-						size: match[1]
-					};
-				}
-				else {
-					return null;
-				}
-			}).filter(function (file) {
-				return file;
-			});
+	Q.all([helper.getReposData(), helper.getSettings()]).then(function (data) {
+		getDownloads().then(function (files) {
 			// Рендерим интерфейс
 			res.render('index', {
 				ip: req.ip,
@@ -47,7 +70,13 @@ router.get('/', function (req, res) {
 				files: files,
 				queue: queue.list()
 			});
+		}).fail(function (err) {
+			console.error(err);
+			throw err;
 		});
+	}).fail(function (err) {
+		console.error(err);
+		throw err;
 	});
 });
 module.exports = router;

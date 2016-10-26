@@ -12,6 +12,7 @@ var fs = require('fs'),
 	queue = require('./queue'),
 	childProcess = require('child_process'),
 	exec = Q.denodeify(childProcess.exec),
+	readFile = Q.denodeify(fs.readFile),
 	execOptions = {
 		maxBuffer: 250000
 	},
@@ -21,13 +22,25 @@ var fs = require('fs'),
 
 /**
  * Сборка патча
- * @param data
+ * @param task Данные задания
  */
-function makePatch(data) {
-	var downloadsDir = path.join(__dirname, '..', 'downloads');
+function makePatch(task) {
+	function getSettingsByAlias(settings, alias) {
+		var i;
+		for (i = 0; i < settings.repositories.length; i++) {
+			if (settings.repositories[i].alias === alias) {
+				return settings.repositories[i];
+			}
+		}
+		return null;
+	}
+
+	var downloadsDir = path.join(__dirname, '..', 'downloads'),
+		data = task.data;
 	console.log('Директория загрузок: «' + downloadsDir + '»');
 	console.log('Собираем патч «' + data.name + '»');
-	return new Promise(function (resolve) {
+	console.log('Данные: ' + JSON.stringify(data));
+	return new Promise(function (resolve, reject) {
 		// Инициализируем все репозитории по необходимости
 		helper.initAllIfNeeded()
 			.then(function () {
@@ -49,6 +62,7 @@ function makePatch(data) {
 					asyncs.push(helper.createRepoDiff(repo, data.name));
 				});
 				fs.writeFileSync('logs/data.txt', JSON.stringify(data, null, 4));
+				console.log(data.type);
 				// Если сборка патча в SVN
 				if (data.type === 'patch_svn') {
 					console.log('Сборка патча для SVN');
@@ -57,7 +71,7 @@ function makePatch(data) {
 							// Заливаем в SVN
 							return helper.pushToSvn(data.name);
 						})
-						.done(function (date) {
+						.then(function (date) {
 							console.log('Патч «' + data.name + '» добавлен в SVN');
 							// Отдаём информацию на интерфейс
 							resolve({
@@ -65,10 +79,11 @@ function makePatch(data) {
 								status: 'ok',
 								date: date
 							});
-						});
+						})
+						.fail(reject);
 				}
 				// Если сборка патча с загрузкой
-				else if (data.type === 'patch_download') {
+				else {
 					console.log('Сборка патча для загрузки');
 					readFile('data/settings.json', 'utf8').then(function (settingsData) {
 						var settings = JSON.parse(settingsData);
@@ -82,7 +97,7 @@ function makePatch(data) {
 									console.log('beforeDownload «' + repo.alias + '»');
 									if (repoSettings.beforeDownload) {
 										console.log('Для репозитория ' + repo.alias + ' существует обработчик beforeDownload');
-										beforeDownloadAsyncs.push(Q.Promise(function (resolve, reject) {
+										beforeDownloadAsyncs.push(Q.Promise(function (resolveInner, rejectInner) {
 											console.log('require(./' + repoSettings.beforeDownload.controller + ')');
 											// Находим контроллер, в котором реализован beforeDownload
 											var controller = require('./' + repoSettings.beforeDownload.controller);
@@ -91,30 +106,32 @@ function makePatch(data) {
 												// Находим экшн контроллера
 												controller[repoSettings.beforeDownload.action](repoSettings.beforeDownload.options, repoSettings, repo, data).then(function () {
 													console.log('Завершился обработчик ' + repoSettings.beforeDownload.action);
-													resolve();
+													resolveInner();
 												}).fail(function (error) {
-													console.error('Ошибка обработчика ' + repoSettings.beforeDownload.action, error);
-													reject();
+													var res = 'Ошибка обработчика ' + repoSettings.beforeDownload.action;
+													console.error(res, error);
+													rejectInner(res);
 												});
 											}
 											else {
-												console.error('Не удалось найти экшн' + repoSettings.beforeDownload.action);
-												reject();
+												var res = 'Не удалось найти экшн' + repoSettings.beforeDownload.action;
+												console.error(res);
+												rejectInner(res);
 											}
 										}));
 									}
 								});
-								return Q.Promise(function (resolve, reject) {
+								return Q.Promise(function (resolveInner, rejectInner) {
 									console.log('beforeDownloadAsyncs');
 									Q.all(beforeDownloadAsyncs)
 									// Создаём архив патча
 										.then(function () {
 											console.log('Создаем архив');
-											resolve(helper.createArchive(data.name, downloadsDir));
+											resolveInner(helper.createArchive(data.name, downloadsDir));
 										})
 										.fail(function (err) {
-											console.log(err);
-											reject(err);
+											console.error(err);
+											rejectInner(err + '');
 										});
 								});
 							})
@@ -124,31 +141,36 @@ function makePatch(data) {
 								resolve({
 									name: data.name,
 									status: 'ok',
-									url: '/shared/' + archName
+									url: '/shared/' + archName,
+									result: '/shared/' + archName
 								});
-								helper.unlock();
-							}).fail(function (err) {
-							console.error(err);
-						});
+							})
+							.fail(function (err) {
+								reject(err + '');
+							});
 					}).fail(function (err) {
-						console.error(err);
+						reject(err + '')
 					});
 				}
 			}).fail(function (err) {
-			console.error(err);
-		});
+				reject(err + '');
+			});
 	});
 }
 
 /**
  * Запуск команды
  * @param cmd Команды
- * @param data Данные
+ * @param task Данные задания
  */
-function run(cmd, data) {
-	var cmdStr = 'node controllers/proc.js ' + cmd + ' ' + JSON.stringify(data) + '&';
+function run(cmd, task) {
+	var cmdStr = 'node controllers/proc.js ' + cmd + ' ' + Buffer.from(JSON.stringify(task)).toString('base64') + ' &';
 	console.log('Запуск команды планировщика: ' + cmdStr);
-	exec(cmdStr, execOptions);
+	exec(cmdStr, execOptions).then(function () {
+		console.log('proc: Команда выполнена.');
+	}).fail(function (err) {
+		console.log('Ошибка запуска команды: ' + err);
+	});
 }
 
 module.exports = {
@@ -179,6 +201,31 @@ if (cmdOptions.length) {
 	console.error = function () {
 		logWrite('ERROR: ' + Array.prototype.slice.call(arguments).join(' '));
 	};
-	// Выполняем функцию
-	module.exports[cmdOptions[0]].apply(this, cmdOptions.slice(1));
+	try {
+		// Выделяем данные задания
+		if (cmdOptions[1]) {
+			var jsonString = Buffer.from(cmdOptions[1], 'base64').toString('utf8');
+			console.log('jsonString: ' + jsonString);
+			cmdOptions[1] = JSON.parse(jsonString);
+		}
+		// Выполняем функцию
+		module.exports[cmdOptions[0]].apply(this, cmdOptions.slice(1)).then(function (res) {
+			if (cmdOptions[1]) {
+				cmdOptions[1].status = 'done';
+				cmdOptions[1].result = res.result;
+				queue.update(cmdOptions[1]);
+			}
+			console.log('proc: ' + cmdOptions[0] + ': done');
+		}).catch(function (err) {
+			if (cmdOptions[1]) {
+				cmdOptions[1].status = 'error';
+				cmdOptions[1].result = err;
+				queue.update(cmdOptions[1]);
+			}
+			console.error(err);
+		});
+	}
+	catch (e) {
+		console.error('ERROR: ' + e.message);
+	}
 }

@@ -1,0 +1,22 @@
+#downloadsContainer.panel.panel-default
+	.panel-body
+		// Ссылки на собранные файлы
+		.row
+			.col-md-12
+				h4 Последние сборки
+				table.table
+					thead
+						tr
+							th #
+							th Ссылка
+							th Размер
+							th
+					tbody
+						each file, i in files
+							tr
+								td #{i + 1}
+								td
+									a.fileLink(href='/shared/' + file.name) #{file.name}
+								td #{file.size}
+								td.text-right
+									button.deleteFile.btn.btn-default.btn-xs(type=button) удалить

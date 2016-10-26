@@ -213,6 +213,11 @@
 				deleteFromQueue($(this));
 			}
 		});
+
+		// Выводи сообщений об ошибках по ссылке
+		$body.on('click', 'a.error', function () {
+			window.alertDefault(this.title);
+		});
 	});
 
 	/**
@@ -240,8 +245,35 @@
 		});
 	}
 
+	/**
+	 * Обновляет список файлов
+	 */
+	function reloadDownloadsList() {
+		mainController.reloadDownloadsList().then(function (html) {
+			$('#downloadsContainer').replaceWith(html);
+		}).fail(function () {
+			console.error(arguments);
+			alert('Ошибка при обновлении списка файлов.');
+		});
+	}
+
+	/**
+	 * Автоматическое обновление серверного времени
+	 */
+	function reloadServerTime() {
+		mainController.reloadServerTime().then(function (html) {
+			$('#serverTime').replaceWith(html);
+		});
+	}
+
 	// Автоматическое обновление очереди
 	setInterval(reloadQueueList, 5000);
+
+	// Автоматическое обновление списка файлов
+	setInterval(reloadDownloadsList, 6000);
+
+	// Автоматическое обновление серверного времени
+	setInterval(reloadServerTime, 7000);
 
 })(jQuery);
 
@@ -249,14 +281,19 @@
  * Отображает сообщения об ошибках
  * @param message Сообщение
  */
+window.alertDefault = window.alert;
 var alert = function (message) {
 	'use strict';
-	var $alert = $(
+	var $alertContainer = $('#alertContainer'),
+		$alert = $(
 			'<div class="alert alert-danger alert-dismissable fade">' +
 			'<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>' +
 			message +
 			'</div>');
-	$('#alertContainer').prepend($alert.fadeIn()).children().addClass('in').scrollTo();
+	$alertContainer.prepend($alert.fadeIn()).children().addClass('in');
+	$alertContainer.find('.alert').slice(3).fadeOut(function () {
+		$(this).remove();
+	});
 };
 
 /**
@@ -265,12 +302,16 @@ var alert = function (message) {
  */
 var info = function (message) {
 	'use strict';
-	var $alert = $(
+	var $alertContainer = $('#alertContainer'),
+		$alert = $(
 			'<div class="alert alert-info alert-dismissable">' +
 			'<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>' +
 			message +
 			'</div>');
-	$('#alertContainer').prepend($alert.fadeIn()).children().addClass('in').scrollTo();
+	$alertContainer.prepend($alert.fadeIn()).children().addClass('in');
+	$alertContainer.find('.alert').slice(3).fadeOut(function () {
+		$(this).remove();
+	});
 };
 
 jQuery.fn.extend({

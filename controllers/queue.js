@@ -21,14 +21,26 @@ var Q = require('q'),
  * @returns {boolean}
  */
 function add(data) {
-	var items = JSON.parse(fs.readFileSync(queuePath, 'utf8'));
+	var items = JSON.parse(fs.readFileSync(queuePath, 'utf8')),
+		id = 1,
+		i;
 	if (items.length) {
-		data.id = items[items.length - 1].id;
+		for (i = items.length - 1; i >= 0; i--) {
+			id = Math.max(id, items[i].id);
+		}
+		for (i = items.length - 1; i >= 0; i--) {
+			if (items[i].status !== 'error' && items[i].status !== 'done') {
+				break;
+			}
+		}
+		data.id = id + 1;
+		items.splice(i >= 0 ? i : 0, 0, data);
 	}
 	else {
-		data.id = 1;
+		data.id = id;
+		items.push(data);
 	}
-	items.push(data);
+
 	fs.writeFileSync(queuePath, JSON.stringify(items), 'utf8');
 	return true;
 }
@@ -64,6 +76,12 @@ function list() {
 		else if (queue[i].status === 'processing') {
 			queue[i].taskStatus = 'Выполняется';
 		}
+		else if (queue[i].status === 'error') {
+			queue[i].taskStatus = 'Ошибка';
+		}
+		else if (queue[i].status === 'done') {
+			queue[i].taskStatus = 'Выполнено';
+		}
 	}
 	return queue;
 }
@@ -82,6 +100,7 @@ function pop() {
 			}
 			// Возвращаем первый попавшийся элемент
 			if (queue[i].status === 'queued') {
+				console.log('Popping queue item', queue[i].id);
 				return queue[i];
 			}
 		}
@@ -95,11 +114,22 @@ function pop() {
  * Обновляет элемент очереди
  */
 function update(item) {
-	var queue = JSON.parse(fs.readFileSync(queuePath, 'utf8')), i;
+	var queue = JSON.parse(fs.readFileSync(queuePath, 'utf8')), i, j;
 	if (queue.length) {
 		for (i = 0; i < queue.length; i++) {
 			if (queue[i].id === item.id) {
 				queue[i] = item;
+				// Если задание завершено
+				if (queue[i].status === 'error' || queue[i].status === 'done') {
+					queue.splice(i, 1);
+					// Вставляем элемент в конец живой очереди, но перед остальными завершенными
+					for (j = 0; j < queue.length; j++) {
+						if (queue[i].status === 'error' || queue[i].status === 'done') {
+							break;
+						}
+					}
+					queue.splice(i >= 0 ? i : 0, 0, item);
+				}
 				fs.writeFileSync(queuePath, JSON.stringify(queue), 'utf8');
 				return true;
 			}

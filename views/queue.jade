@@ -19,8 +19,14 @@
 							tr
 								td #{i + 1}
 								td #{item.taskName}
-								td #{item.taskDate}
+								td #{item.taskDate} #{item.type}
 								td #{item.taskCreator}
-								td #{item.taskStatus}
+								td
+									if (item.status === 'error')
+										a.error(title="#{item.result}") #{item.taskStatus}
+									else if (item.status === 'done' && item.type === 'make-patch')
+										a(href="#{item.result}") #{item.taskStatus}
+									else
+										|#{item.taskStatus}
 								td.text-right
 									button.deleteFromQueue.btn.btn-default.btn-xs(type=button, data-id="#{item.id}", data-status="#{item.status}") удалить
