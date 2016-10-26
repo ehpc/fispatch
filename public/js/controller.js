@@ -66,18 +66,15 @@ var mainController = mainController || (function ($) {
 	 * @returns {Promise}
 	 */
 	function setSettings(data) {
-		var $def = $.Deferred();
-		$.ajax({
+		return $.ajax({
 			type: 'POST',
-			url: '/api/settings',
+			url: '/api/queue/add',
 			data: {
-				settings: data
+				type: 'changeSettings',
+				data: data
 			},
 			dataType: 'json'
-		}).then(function (res) {
-			$def.resolve(res);
-		}).fail($def.reject);
-		return $def.promise();
+		});
 	}
 
 	/**

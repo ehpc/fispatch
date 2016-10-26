@@ -30,6 +30,9 @@ router
 				'Сборка патча "' + queueData.data.name + '"' +
 				' (' + JSON.stringify(queueData.data.repos) + ')';
 		}
+		else if (req.body.type === 'changeSettings') {
+			queueData.taskName = 'Изменение настроек';
+		}
 		queueData.taskCreator = settings.ipMap[req.ip] || req.ip;
 		queue.add(queueData);
 		console.log('Добавлено задание', JSON.stringify(queueData));

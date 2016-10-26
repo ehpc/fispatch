@@ -21,6 +21,30 @@ var fs = require('fs'),
 	});
 
 /**
+ * Изменениме настроек
+ * @param task
+ */
+function changeSettings(task) {
+	var data = task.data;
+	return new Promise(function (resolve, reject) {
+		fs.writeFile('data/settings.json', data, function (err) {
+			if (err) {
+				reject(err);
+				return;
+			}
+			// После сохранения заново инициализируем приложение
+			helper.initAll().then(function () {
+				resolve({
+					result: 'ok'
+				});
+			}).fail(function (err) {
+				reject(err);
+			});
+		});
+	});
+}
+
+/**
  * Обновляет данные сборщика
  * @returns {Promise}
  */
@@ -192,6 +216,7 @@ function run(cmd, task) {
 module.exports = {
 	makePatch: makePatch,
 	updateSystemData: updateSystemData,
+	changeSettings: changeSettings,
 	run: run
 };
 

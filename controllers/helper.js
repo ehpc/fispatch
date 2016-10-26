@@ -113,7 +113,7 @@ var helper = helper || (function () {
 					if (snapshotSettings.type === 'branch') {
 						console.log('Собираем ветку целиком для репозитория «' + snapshotSettings.alias + '»');
 						// Сборка дистрибутива по необходимости
-						createDistrib(snapshotSettings, snapshotSettings.branch, repository, tempDir, filesTempDirBase).done(function () {
+						createDistrib(snapshotSettings, snapshotSettings.branch, repository, tempDir, filesTempDirBase).then(function () {
 							// Сборка патча
 							console.log('Собираем патч');
 							// Устанавливаем нужную ветку
@@ -135,13 +135,13 @@ var helper = helper || (function () {
 									console.error(err);
 									deferred.reject(err);
 								});
-						});
+						}).fail(deferred.reject);
 					}
 					// Если собираем диапазон ревизий
 					else if (snapshotSettings.type === 'rev') {
 						console.log('Собираем по указанным ревизиям');
 						// Сборка дистрибутива
-						createDistrib(snapshotSettings, snapshotSettings.endRev, repository, tempDir, filesTempDirBase).done(function () {
+						createDistrib(snapshotSettings, snapshotSettings.endRev, repository, tempDir, filesTempDirBase).then(function () {
 							// Сборка патча
 							// Устанавливаем нужную ревизию
 							updateToRevision(repository, tempDir, snapshotSettings.endRev)
@@ -158,7 +158,7 @@ var helper = helper || (function () {
 									console.error(err);
 									deferred.reject(err);
 								});
-						});
+						}).fail(deferred.reject);
 					}
 					else {
 						console.log('Неверный формат сборки репозитория «' + snapshotSettings.alias + '»');
@@ -190,10 +190,11 @@ var helper = helper || (function () {
 					// Копируем все файлы
 					return copyAllFilesToTemp(repository, tempDir, path.join(filesTempDir, 'distrib', snapshotSettings.alias));
 				})
-				.done(function () {
+				.then(function () {
 					console.log('Скопировали все файлы репозитория «' + snapshotSettings.alias + '» в директорию «' + filesTempDir + '»');
 					deferred.resolve(null);
-				});
+				})
+				.fail(deferred.reject);
 		}
 		else {
 			deferred.resolve(null);
@@ -212,9 +213,9 @@ var helper = helper || (function () {
 				tempDir = settings.temp,
 				filesTempDirBase = path.join(tempDir, 'files_temp/');
 			// Чистим временную директорию изменённых файлов
-			exec('rm -rf "' + filesTempDirBase + '"', execOptions).done(function () {
+			exec('rm -rf "' + filesTempDirBase + '"', execOptions).then(function () {
 				return deferred.resolve(null);
-			});
+			}).fail(deferred.reject);
 		});
 		return deferred.promise;
 	}
@@ -231,9 +232,10 @@ var helper = helper || (function () {
 				svnDir = path.join(tempDir, 'svn');
 			console.log('Очищаем SVN');
 			exec('cd ' + svnDir + " && svn st | grep '^?' | awk '{print $2}' | xargs rm -rf", execOptions)
-				.done(function () {
+				.then(function () {
 					deferred.resolve(null);
-				});
+				})
+				.fail(deferred.reject);
 		});
 		return deferred.promise;
 	}
@@ -250,9 +252,10 @@ var helper = helper || (function () {
 				svnDir = path.join(tempDir, 'svn');
 			console.log('Обновляем SVN');
 			exec('cd ' + svnDir + " && svn cleanup && svn update", execOptions)
-				.done(function () {
+				.then(function () {
 					deferred.resolve(null);
-				});
+				})
+				.fail(deferred.reject);
 		});
 		return deferred.promise;
 	}
@@ -268,9 +271,10 @@ var helper = helper || (function () {
 			.fail(function () {
 				deferred.resolve(false);
 			})
-			.done(function () {
+			.then(function () {
 				deferred.resolve(true);
-			});
+			})
+			.fail(deferred.reject);
 		return deferred.promise;
 	}
 
@@ -341,10 +345,11 @@ var helper = helper || (function () {
 					return exec('cd ' + svnDir + ' && svn commit -m "Создаём патч «' +
 						patchName + '». Дата: ' + svnDate + '."', execOptions);
 				})
-				.done(function () {
+				.then(function () {
 					console.log('Изменения, вероятно, запушены в SVN');
 					deferred.resolve(svnDate);
-				});
+				})
+				.fail(deferred.reject);
 		});
 		return deferred.promise;
 	}
@@ -366,10 +371,10 @@ var helper = helper || (function () {
 				archName = getDateTimeString() + '_' + patchName + '.tar.gz',
 				archFullName = path.join(downloadsDir, archName);
 			console.log('tar -czf "' + archFullName + '" -C "' + filesTempDirBase + '" .');
-			exec('tar -czf "' + archFullName + '" -C "' + filesTempDirBase + '" .', execOptions).done(function () {
+			exec('tar -czf "' + archFullName + '" -C "' + filesTempDirBase + '" .', execOptions).then(function () {
 				console.log('tar закончен');
 				deferred.resolve(archName);
-			});
+			}).fail(deferred.reject);
 		});
 		return deferred.promise;
 	}
@@ -403,9 +408,10 @@ var helper = helper || (function () {
 				});
 				return sequentialPromises.apply(this, asyncs);
 			})
-			.done(function () {
+			.then(function () {
 				deferred.resolve(null);
-			});
+			})
+			.fail(deferred.reject);
 		return deferred.promise;
 	}
 
@@ -523,10 +529,11 @@ var helper = helper || (function () {
 					return true;
 				}
 			})
-			.done(function () {
+			.then(function () {
 				console.log('Завершили копирование файлов');
 				deferred.resolve(null);
-			});
+			})
+			.fail(deferred.reject);
 		return deferred.promise;
 	}
 
@@ -549,7 +556,7 @@ var helper = helper || (function () {
 		console.log('Находим изменённые файлы для репозитория «' + repository.alias + '»',
 			hgCommand + ' log --template "{join(file_adds,\'\\n\')}\\n{join(file_mods,\'\\n\')}\\n" --rev "' + branchFilter + ' ' + hgFilter + '" -R ' + repositoryPath + ' | sort | uniq');
 		exec(hgCommand + ' log --template "{join(file_adds,\'\\n\')}\\n{join(file_mods,\'\\n\')}\\n" --rev "' + branchFilter + ' ' + hgFilter + '" -R ' + repositoryPath + ' | sort | uniq', execOptions)
-			.done(function (out) {
+			.then(function (out) {
 				// Команда вернула нам список файлов с их статусами в репозитории
 				var files = out[0].split("\n"),
 					fileNames = [];
@@ -570,7 +577,8 @@ var helper = helper || (function () {
 				});
 				fs.writeFileSync('logs/fileNames.txt', fileNames.join('\n'));
 				deferred.resolve(fileNames);
-			});
+			})
+			.fail(deferred.reject);
 
 		/*console.log('Находим изменённые файлы для репозитория «' + repository.alias + '»', hgCommand + ' status -A --rev ' + startRev + ':' + endRev + ' -R ' + repositoryPath);
 		exec(hgCommand + ' status -A --rev ' + startRev + ':' + endRev + ' -R ' + repositoryPath, execOptions)
@@ -613,13 +621,14 @@ var helper = helper || (function () {
 				console.log('Вычисляем конечную ревизию', 'hg log -r "max(branch(\'' + branch + '\'))" --template "{node}\n" -R ' + repositoryPath);
 				return exec(hgCommand + ' log -r "max(branch(\'' + branch + '\'))" --template "{node}\n" -R ' + repositoryPath, execOptions);
 			})
-			.done(function (out) {
+			.then(function (out) {
 				endRev = out[0].split("\n")[0];
 				deferred.resolve({
 					startRev: startRev,
 					endRev: endRev
 				});
-			});
+			})
+			.fail(deferred.reject);
 		return deferred.promise;
 	}
 
@@ -635,9 +644,10 @@ var helper = helper || (function () {
 			deferred = Q.defer();
 		console.log('Меняем ветку репозитория «' + repository.alias + '» на «' + branch + '»', hgCommand + ' update --clean "' + branch + '" -R ' + repositoryPath);
 		exec(hgCommand + ' update --clean "' + branch + '" -R ' + repositoryPath, execOptions)
-			.done(function () {
+			.then(function () {
 				deferred.resolve(null);
-			});
+			})
+			.fail(deferred.reject);
 		return deferred.promise;
 	}
 
@@ -653,9 +663,10 @@ var helper = helper || (function () {
 			deferred = Q.defer();
 		console.log('Меняем текущую ревизию репозитория «' + repository.alias + '» на «' + revision + '»');
 		exec(hgCommand + ' update --clean -r "' + revision + '" -R ' + repositoryPath, execOptions)
-			.done(function () {
+			.then(function () {
 				deferred.resolve(null);
-			});
+			})
+			.fail(deferred.reject);
 		return deferred.promise;
 	}
 
@@ -744,7 +755,7 @@ var helper = helper || (function () {
 							i, colors, branchName;
 						console.log('Получаем список веток для репозитория «' + repository.alias + '»', 'hg branches -R ' + repositoryPath);
 						exec(hgCommand + ' branches -c -R ' + repositoryPath, execOptions)
-							.done(function (out) {
+							.then(function (out) {
 								var rx = new RegExp('(.+)\\s+(\\d+):(\\w+)', 'ig'),
 									res;
 								if (typeof data[repository.alias] === 'undefined') {
@@ -770,7 +781,8 @@ var helper = helper || (function () {
 								}
 								console.log('<<<Получили список веток для репозитория «' + repository.alias + '»');
 								deferred.resolve(null);
-							});
+							})
+							.fail(deferred.reject);
 						return deferred.promise;
 					}
 
@@ -784,7 +796,7 @@ var helper = helper || (function () {
 							deferred = Q.defer();
 						console.log('Получаем список ревизий для репозитория «' + repository.alias + '»', hgCommand + ' log --limit 100 --debug --template "rev:{rev};; branch:{branches};; node:{node};; desc:{desc|firstline};; parents:{parents};;\n" -R ' + repositoryPath);
 						exec(hgCommand + ' log --limit ' + repository.revisionsLimit + ' --debug --template "rev:{rev};; branch:{branches};; node:{node};; desc:{desc|firstline};; parents:{parents};;\n" -R ' + repositoryPath, execOptions)
-							.done(function (out) {
+							.then(function (out) {
 								var rx = new RegExp('rev:(\\d+);; branch:([^;]*);; node:(\\w+);; desc:(.+);; parents:[-\\d]+:(\\w+) .+;;', 'ig'),
 									res;
 								if (typeof data[repository.alias] === 'undefined') {
@@ -817,7 +829,8 @@ var helper = helper || (function () {
 								}
 								console.log('<<<Получили список ревизий для репозитория «' + repository.alias + '»');
 								deferred.resolve(null);
-							});
+							})
+							.fail(deferred.reject);
 						return deferred.promise;
 					}
 
@@ -827,7 +840,7 @@ var helper = helper || (function () {
 						// Предварительно обновим репозитории
 						asyncs0.push(updateRepo(settings.repositories[i], tempDir));
 					}
-					Q.all(asyncs0).done(function () {
+					Q.all(asyncs0).then(function () {
 						console.log('getBranches');
 						for (i = 0; i < settings.repositories.length; i++) {
 							// Создаём стек функций, которые достанут данные о ветках репозитория
@@ -850,7 +863,7 @@ var helper = helper || (function () {
 								deferred.resolve(data);
 							});
 						});
-					});
+					}).fail(deferred.reject);
 					return deferred.promise;
 				}
 
@@ -873,9 +886,9 @@ var helper = helper || (function () {
 			settings.repositories.forEach(function (repo) {
 				asyncs.push(updateRepo(repo, tempDir));
 			});
-			Q.all(asyncs).done(function () {
+			Q.all(asyncs).then(function () {
 				deferred.resolve(null);
-			});
+			}).fail(deferred.reject);
 		});
 		return deferred.promise;
 	}
@@ -895,10 +908,11 @@ var helper = helper || (function () {
 				console.log('Обновляем репозиторий «' + repository.alias + '»', 'hg update --quiet --clean -R ' + repositoryPath);
 				return exec(hgCommand + ' update --quiet --clean -R ' + repositoryPath, execOptions);
 			})
-			.done(function () {
+			.then(function () {
 				console.log('<<<Затянули изменения репозитория «' + repository.alias + '»');
 				deferred.resolve(null);
-			});
+			})
+			.fail(deferred.reject);
 		return deferred.promise;
 	}
 
@@ -924,9 +938,9 @@ var helper = helper || (function () {
 			console.log('Загружаем данные о ветках. Необходимость инициализации: ', needInit);
 			// Если репозитории не загружены
 			if (needInit) {
-				initAll().done(function () {
+				initAll().then(function () {
 					deferred.resolve(null);
-				});
+				}).fail(deferred.reject);
 			}
 			// Если загружены
 			else {
@@ -942,7 +956,7 @@ var helper = helper || (function () {
 	function initAll() {
 		var deferred = Q.defer();
 		console.log('Инициализируем репозитории...');
-		readFile('data/settings.json', 'utf8').done(function (data) {
+		readFile('data/settings.json', 'utf8').then(function (data) {
 			var settings = JSON.parse(data),
 				tempDir = settings.temp,
 				svnDir = path.join(tempDir, 'svn'),
@@ -969,10 +983,11 @@ var helper = helper || (function () {
 						console.log('Клонируем репозиторий «' + repository.alias + '»', hgCommand + ' clone -r ' + repository.cloneRev + ' ' + repository.address + ' ' + repositoryPath);
 						return exec(hgCommand + ' clone -r ' + repository.cloneRev + ' ' + repository.address + ' ' + repositoryPath, execOptions);
 					})
-					.done(function () {
+					.then(function () {
 						console.log('Клонирование «' + repository.alias + '» завершено');
 						deferred.resolve(null);
-					});
+					})
+					.fail(deferred.reject);
 				return deferred.promise;
 			}
 
@@ -1012,7 +1027,7 @@ var helper = helper || (function () {
 				console.log(err);
 				deferred.reject(err);
 			});
-		});
+		}).fail(deferred.reject);
 		return deferred.promise;
 	}
 
@@ -1022,9 +1037,9 @@ var helper = helper || (function () {
 	 */
 	function getSettings() {
 		var deferred = Q.defer();
-		readFile('data/settings.json', 'utf8').done(function (data) {
+		readFile('data/settings.json', 'utf8').then(function (data) {
 			deferred.resolve(JSON.parse(data));
-		});
+		}).fail(deferred.reject);
 		return deferred.promise;
 	}
 

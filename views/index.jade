@@ -52,7 +52,7 @@ block content
 									each branch in repoData.branches
 										option(value="#{branch}", style="background: #{repoData.branchesMetadata[branch].color};") #{branch}
 								if index === 0
-									.help Все изменения в выбранной ветке (обычно, это то, что нужно)
+									.help Все изменения в выбранной ветке (обычно - это то, что нужно)
 							.col-md-2
 								select.form-control.selectpicker.show-tick.formStartRev(id="formStartRev#{repoName}", data-live-search="true")
 									option(value='') Выберите начальную ревизию
@@ -92,6 +92,3 @@ block content
 				.row.mt15
 					.col-md-12
 						button#buttonSaveSettings.btn.btn-success.btn-block(type="button") Сохранить настройки
-				.row.mt15
-					.col-md-12
-						button#buttonResetSettings.btn.btn-danger.btn-block(type="button") Сбросить настройки и репозитории
