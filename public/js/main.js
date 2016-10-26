@@ -93,7 +93,7 @@
 			var data = getSelectedData('patch_svn');
 			if (data) {
 				waitingDialog.show('Добавляем задание в очередь...');
-				mainController.makePatch('patch_svn', data).done(function (res) {
+				mainController.makePatch('patch_svn', data).then(function (res) {
 					waitingDialog.hide();
 					info('Задание добавлено в очередь.');
 				});
@@ -105,7 +105,7 @@
 			var data = getSelectedData('patch_download');
 			if (data) {
 				waitingDialog.show('Добавляем задание в очередь...');
-				mainController.makePatch('patch_download', data).done(function (res) {
+				mainController.makePatch('patch_download', data).then(function (res) {
 					waitingDialog.hide();
 					reloadQueueList();
 					info('Задание добавлено в очередь.');
@@ -123,7 +123,7 @@
 				waitingDialog.show('Добавляем задание в очередь...');
 				mainController.setSettings($formSettings.val()).then(function () {
 					waitingDialog.hide();
-					location.reload();
+					reloadQueueList();
 				}).fail(function (err) {
 					console.error(err);
 					waitingDialog.hide();
@@ -136,7 +136,7 @@
 		$body.on('click', '#buttonResetSettings', function () {
 			if (confirm('Вы уверены, что хотите сбросить настройки?')) {
 				waitingDialog.show('Добавляем задание в очередь...');
-				mainController.resetSettings().done(function () {
+				mainController.resetSettings().then(function () {
 					location.reload();
 				}).fail(function (err) {
 					console.error(err);
@@ -149,7 +149,14 @@
 		// Кнопка обновления репозиториев
 		$body.on('click', '#buttonUpdateSystemData', function () {
 			waitingDialog.show('Добавляем задание в очередь...');
-			mainController.updateSystemData().done(function () {
+			mainController.updateSystemData().then(function (data) {
+				var timer = setInterval(function () {
+					var status = $('#queue').find('tr[data-id=' + data.result + ']').data('status');
+					if (status === 'done' || status === 'error') {
+						clearInterval(timer);
+						location.reload();
+					}
+				}, 1000);
 				waitingDialog.hide();
 				reloadQueueList();
 				info('Задание добавлено в очередь.');

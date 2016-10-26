@@ -21,7 +21,7 @@
 							th
 					tbody
 						each item, i in queue
-							tr
+							tr(data-id="#{item.id}", data-status="#{item.status}")
 								td #{i + 1}
 								td #{item.taskName}
 								td #{item.taskDate}

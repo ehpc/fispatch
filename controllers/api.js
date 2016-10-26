@@ -37,7 +37,7 @@ router
 		queue.add(queueData);
 		console.log('Добавлено задание', JSON.stringify(queueData));
 		res.json({
-			result: 'ok'
+			result: queueData.id
 		});
 	})
 
