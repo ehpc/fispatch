@@ -24,6 +24,25 @@ function add(data) {
 	var items = JSON.parse(fs.readFileSync(queuePath, 'utf8')),
 		id = 1,
 		i;
+	// Заполняем параметры задания
+	if (typeof data.status === 'undefined') {
+		data.status = 'queued';
+	}
+	if (typeof data.timestamp === 'undefined') {
+		data.timestamp = new Date().getTime();
+	}
+	if (typeof data.taskDate === 'undefined') {
+		data.taskDate = new Date(data.timestamp).toLocaleString();
+	}
+	if (data.type === 'updateSystemData') {
+		if (typeof data.taskName === 'undefined') {
+			data.taskName = 'Обновление репозиториев';
+		}
+		if (typeof data.taskCreator === 'undefined') {
+			data.taskCreator = 'system';
+		}
+	}
+	// Добавляем в очередь
 	if (items.length) {
 		for (i = items.length - 1; i >= 0; i--) {
 			id = Math.max(id, items[i].id);
@@ -34,13 +53,13 @@ function add(data) {
 			}
 		}
 		data.id = id + 1;
-		items.splice(i >= 0 ? i : 0, 0, data);
+		items.splice(i >= 0 ? i + 1 : 0, 0, data);
 	}
 	else {
 		data.id = id;
 		items.push(data);
 	}
-
+	items = normalize(items);
 	fs.writeFileSync(queuePath, JSON.stringify(items), 'utf8');
 	return true;
 }
@@ -111,6 +130,35 @@ function pop() {
 }
 
 /**
+ * Удаляет старые задания из очереди, чтобы не засорять эфир
+ * @param queue
+ */
+function normalize(queue) {
+	var map = {}, i;
+	for (i = 0; i < queue.length; i++) {
+		if (queue[i].status === 'error' || queue[i].status === 'done') {
+			if (typeof map[queue[i].type] === 'undefined') {
+				map[queue[i].type] = 0;
+			}
+			// Не держим больше одного завершенного системного задания
+			if (queue[i].taskCreator === 'system' && map[queue[i].type] >= 1) {
+				queue.splice(i, 1);
+				i--;
+			}
+			// Не держим больше десяти завершенных заданий другого типа
+			else if (map[queue[i].type] >= 10) {
+				queue.splice(i, 1);
+				i--;
+			}
+			else {
+				map[queue[i].type] += 1;
+			}
+		}
+	}
+	return queue;
+}
+
+/**
  * Обновляет элемент очереди
  */
 function update(item) {
@@ -120,16 +168,17 @@ function update(item) {
 			if (queue[i].id === item.id) {
 				queue[i] = item;
 				// Если задание завершено
-				if (queue[i].status === 'error' || queue[i].status === 'done') {
+				if (item.status === 'error' || item.status === 'done') {
 					queue.splice(i, 1);
 					// Вставляем элемент в конец живой очереди, но перед остальными завершенными
-					for (j = 0; j < queue.length; j++) {
-						if (queue[i].status === 'error' || queue[i].status === 'done') {
+					for (i = queue.length - 1; i >= 0; i--) {
+						if (queue[i].status !== 'error' && queue[i].status !== 'done') {
 							break;
 						}
 					}
-					queue.splice(i >= 0 ? i : 0, 0, item);
+					queue.splice(i >= 0 ? i + 1 : 0, 0, item);
 				}
+				queue = normalize(queue);
 				fs.writeFileSync(queuePath, JSON.stringify(queue), 'utf8');
 				return true;
 			}

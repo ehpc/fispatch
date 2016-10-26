@@ -82,28 +82,29 @@
 
 	$(document).ready(function () {
 
-		var $formSettings = $('#formSettings');
+		var $formSettings = $('#formSettings'),
+			$body = $('body');
 
 		// Инициализируем красивые селекторы
 		$('.selectpicker').selectpicker();
 
 		// Кнопка сборки патча и залития в svn
-		$('#buttonPatchSvn').on('click', function () {
+		$body.on('click', '#buttonPatchSvn', function () {
 			var data = getSelectedData('patch_svn');
 			if (data) {
-				waitingDialog.show('Собираем патч...');
+				waitingDialog.show('Добавляем задание в очередь...');
 				mainController.makePatch('patch_svn', data).done(function (res) {
 					waitingDialog.hide();
-					info('Патч «' + res.name + '» успешно собран [' + res.date + '].');
+					info('Задание добавлено в очередь.');
 				});
 			}
 		});
 
 		// Кнопка сборки патча и скачивания архива
-		$('#buttonPatchDownload').on('click', function () {
+		$body.on('click', '#buttonPatchDownload', function () {
 			var data = getSelectedData('patch_download');
 			if (data) {
-				waitingDialog.show('Собираем патч...');
+				waitingDialog.show('Добавляем задание в очередь...');
 				mainController.makePatch('patch_download', data).done(function (res) {
 					waitingDialog.hide();
 					reloadQueueList();
@@ -111,37 +112,61 @@
 				}).fail(function (err) {
 					console.error(err);
 					waitingDialog.hide();
-					alert('Ошибка при сборке патча. ' + err.responseText);
+					alert('Ошибка при добавлении задания в очередь. ' + err.responseText);
 				});
 			}
 		});
 
 		// Кнопка сохранения настроек
-		$('#buttonSaveSettings').on('click', function () {
+		$body.on('click', '#buttonSaveSettings', function () {
 			if (confirm('Вы уверены, что хотите сохранить настройки?')) {
-				waitingDialog.show('Сохраняем настройки...');
+				waitingDialog.show('Добавляем задание в очередь...');
 				mainController.setSettings($formSettings.val()).then(function () {
 					waitingDialog.hide();
 					location.reload();
 				}).fail(function (err) {
 					console.error(err);
 					waitingDialog.hide();
-					alert('Ошибка при сохранении настроек.' + err.responseText);
+					alert('Ошибка при добавлении задания в очередь.' + err.responseText);
 				});
 			}
 		});
 
 		// Кнопка сброса настроек
-		$('#buttonResetSettings').on('click', function () {
+		$body.on('click', '#buttonResetSettings', function () {
 			if (confirm('Вы уверены, что хотите сбросить настройки?')) {
-				waitingDialog.show('Сбрасываем настройки...');
+				waitingDialog.show('Добавляем задание в очередь...');
 				mainController.resetSettings().done(function () {
 					location.reload();
 				}).fail(function (err) {
 					console.error(err);
 					waitingDialog.hide();
-					alert('Ошибка при сбрасывании настроек.' + err.responseText);
+					alert('Ошибка при добавлении задания в очередь.' + err.responseText);
 				});
+			}
+		});
+
+		// Кнопка обновления репозиториев
+		$body.on('click', '#buttonUpdateSystemData', function () {
+			waitingDialog.show('Добавляем задание в очередь...');
+			mainController.updateSystemData().done(function () {
+				waitingDialog.hide();
+				reloadQueueList();
+				info('Задание добавлено в очередь.');
+			}).fail(function (err) {
+				console.error(err);
+				waitingDialog.hide();
+				alert('Ошибка при добавлении задания в очередь. ' + err.responseText);
+			});
+		});
+
+		// Кнопка вызова справки
+		$body.on('click', '#buttonHelp', function () {
+			if ($body.hasClass('showHelp')) {
+				$body.removeClass('showHelp');
+			}
+			else {
+				$body.addClass('showHelp');
 			}
 		});
 
@@ -161,38 +186,8 @@
 			return 'Следующая попытка через ' + parseInt(leftMs / 1000, 10) + ' секунд' + postfix + '.';
 		}
 
-		// Если ожидаем блокировки
-		var $lockMessage = $('.lockMessage'),
-			lockCountdown = 10000,
-			lockTimer;
-		if ($lockMessage.length) {
-			$lockMessage.text(getCountdownMessage(lockCountdown));
-			lockTimer = setInterval(function () {
-				lockCountdown -= 1000;
-				if (lockCountdown <= 0) {
-					clearInterval(lockTimer);
-					window.location.reload();
-				}
-				else {
-					$lockMessage.text(getCountdownMessage(lockCountdown));
-				}
-			}, 1000);
-
-			$('#forceLock').on('click', function () {
-				if (confirm('Вы уверены?')) {
-					clearInterval(lockTimer);
-					$lockMessage.text('All your base are belong to us...');
-					mainController.forceLock().done(function () {
-						window.location.reload();
-					}).fail(function () {
-						window.location.reload();
-					});
-				}
-			});
-		}
-		
 		// Удаляет файл
-		$('.deleteFile').on('click', function () {
+		$body.on('click', '.deleteFile', function () {
 			var $tr = $(this).closest('tr'),
 				name = $tr.find('.fileLink').text();
 			mainController.deleteFile(name).then(function () {
@@ -203,7 +198,6 @@
 			});
 		});
 
-		var $body = $('body');
 		// Обновляет очередь
 		$body.on('click', '.reloadQueueList', reloadQueueList);
 
@@ -241,7 +235,6 @@
 			$('#queue').replaceWith(html);
 		}).fail(function () {
 			console.error(arguments);
-			alert('Ошибка при обновлении очереди.');
 		});
 	}
 
@@ -253,7 +246,6 @@
 			$('#downloadsContainer').replaceWith(html);
 		}).fail(function () {
 			console.error(arguments);
-			alert('Ошибка при обновлении списка файлов.');
 		});
 	}
 
@@ -267,13 +259,13 @@
 	}
 
 	// Автоматическое обновление очереди
-	setInterval(reloadQueueList, 5000);
+	setInterval(reloadQueueList, 7000);
 
 	// Автоматическое обновление списка файлов
-	setInterval(reloadDownloadsList, 6000);
+	setInterval(reloadDownloadsList, 20000);
 
 	// Автоматическое обновление серверного времени
-	setInterval(reloadServerTime, 7000);
+	setInterval(reloadServerTime, 15000);
 
 })(jQuery);
 

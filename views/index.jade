@@ -13,6 +13,8 @@ block content
 						.form-group
 							label(for="formPatchName") Название патча
 							input.form-control(id="formPatchName",placeholder="Например, «072.072»")
+							.help Название может быть произвольным. Оно добавляется к имени архива, а также может
+								| использоваться в шаблонах подстановки в виде "__NAME__".
 				// Список репозиториев с выбором диапазона сборки
 				.row
 					.col-md-2
@@ -23,6 +25,7 @@ block content
 						label Собрать ветку целиком
 					.col-md-4
 						label Собрать диапазон ревизий
+				-var index = 0
 				each repoData, repoName in reposData
 					if !repoData.hidden
 						.row.repoRow
@@ -31,6 +34,8 @@ block content
 									label
 										input.selectRepo(type="checkbox", value="#{repoName}")
 										span.repoName #{repoName}
+										if index === 0
+											.help Можно собрать сразу несколько в один архив
 							.col-md-2
 								.checkbox
 									label
@@ -39,11 +44,15 @@ block content
 										else
 											input.isDistrib(type="checkbox", value="distrib", disabled, checked)
 										span Дистрибутив
+										if index === 0
+											.help Вместе с патчем собирает дистрибутив, включающий все файлы системы
 							.col-md-4
 								select.form-control.selectpicker.show-tick.formBranch(id="formBranch#{repoName}", data-live-search="true")
 									option(value='') Выберите ветку
 									each branch in repoData.branches
 										option(value="#{branch}", style="background: #{repoData.branchesMetadata[branch].color};") #{branch}
+								if index === 0
+									.help Все изменения в выбранной ветке (обычно, это то, что нужно)
 							.col-md-2
 								select.form-control.selectpicker.show-tick.formStartRev(id="formStartRev#{repoName}", data-live-search="true")
 									option(value='') Выберите начальную ревизию
@@ -54,12 +63,21 @@ block content
 									option(value='') Выберите конечную ревизию
 									each revision in repoData.revisions
 										option(value="#{revision.node};#{revision.parent1}", style="background: #{revision.color};") [#{revision.branch}] #{revision.rev} #{revision.desc}
+						-index++
 				//.row.mt15
 				//	.col-md-12
 				//		button#buttonPatchSvn.btn.btn-success.btn-block(type="button") Собрать патч и залить в SVN
 				.row.mt15
 					.col-md-12
-						button#buttonPatchDownload.btn.btn-primary.btn-block(type="button") Собрать патч и скачать архив
+						button#buttonPatchDownload.btn.btn-primary.btn-block(type="button") Собрать патч
+				.row.mt15
+					.col-md-12
+						button#buttonUpdateSystemData.btn.btn-warning.btn-block(type="button") Обновить репозитории
+						.help Обновляет список репозиториев, отображаемых в окне создания патча
+				.row.mt15
+					.col-md-12
+						button#buttonHelp.btn.btn-info.btn-block(type="button") Справка
+						.help Если нажать ещё раз, то справка исчезнет
 		#alertContainer
 		include queue.jade
 		include downloads.jade

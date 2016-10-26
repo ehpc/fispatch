@@ -21,6 +21,22 @@ var fs = require('fs'),
 	});
 
 /**
+ * Обновляет данные сборщика
+ * @returns {Promise}
+ */
+function updateSystemData() {
+	return new Promise(function (resolve, reject) {
+		helper.getReposData().then(function () {
+			resolve({
+				result: 'ok'
+			});
+		}).fail(function (err) {
+			reject(err + '');
+		});
+	});
+}
+
+/**
  * Сборка патча
  * @param task Данные задания
  */
@@ -149,7 +165,7 @@ function makePatch(task) {
 								reject(err + '');
 							});
 					}).fail(function (err) {
-						reject(err + '')
+						reject(err + '');
 					});
 				}
 			}).fail(function (err) {
@@ -175,6 +191,7 @@ function run(cmd, task) {
 
 module.exports = {
 	makePatch: makePatch,
+	updateSystemData: updateSystemData,
 	run: run
 };
 
@@ -217,15 +234,20 @@ if (cmdOptions.length) {
 			}
 			console.log('proc: ' + cmdOptions[0] + ': done');
 		}).catch(function (err) {
+			console.error(err);
 			if (cmdOptions[1]) {
 				cmdOptions[1].status = 'error';
 				cmdOptions[1].result = err;
 				queue.update(cmdOptions[1]);
 			}
-			console.error(err);
 		});
 	}
 	catch (e) {
 		console.error('ERROR: ' + e.message);
+		if (cmdOptions[1]) {
+			cmdOptions[1].status = 'error';
+			cmdOptions[1].result = e.message;
+			queue.update(cmdOptions[1]);
+		}
 	}
 }

@@ -21,21 +21,15 @@ router
 	// Добавление задания в очередь
 	.post('/api/queue/add', function (req, res) {
 		var queueData = {
-				status: 'queued',
-				timestamp: new Date().getTime(),
 				data: req.body.data
 			},
 			settings = JSON.parse(fs.readFileSync('data/settings.json', 'utf8'));
 		queueData.type = req.body.type;
-		if (req.body.type === 'make-patch') {
+		if (req.body.type === 'makePatch') {
 			queueData.taskName =
 				'Сборка патча "' + queueData.data.name + '"' +
 				' (' + JSON.stringify(queueData.data.repos) + ')';
 		}
-		else {
-			queueData.taskName = queueData.data.type;
-		}
-		queueData.taskDate = new Date(queueData.timestamp).toLocaleString();
 		queueData.taskCreator = settings.ipMap[req.ip] || req.ip;
 		queue.add(queueData);
 		console.log('Добавлено задание', JSON.stringify(queueData));

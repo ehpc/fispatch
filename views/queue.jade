@@ -5,6 +5,11 @@
 			.col-md-12
 				h4 Очередь заданий
 				button.reloadQueueList.btn.btn-default.btn-xs.btn-right(type=button) Обновить список очереди
+				.help Команды сборщика не выполняются сразу же, а добавляются в очередь. Сначала выполняются команды,
+					| добавленные первыми. Сборщик может инициировать команды самостоятельно. В таком случае в поле
+					| "Инициатор" будет указано "system". Вообще, в этом поле указывается IP-адрес машины, на которой
+					| открыт сборщик. Для удобства, в настройках можно задать соответствие IP-адреса и псевдонима
+					| пользователя в параметре "ipMap".
 				table.table
 					thead
 						tr
@@ -19,13 +24,16 @@
 							tr
 								td #{i + 1}
 								td #{item.taskName}
-								td #{item.taskDate} #{item.type}
+								td #{item.taskDate}
 								td #{item.taskCreator}
 								td
 									if (item.status === 'error')
 										a.error(title="#{item.result}") #{item.taskStatus}
-									else if (item.status === 'done' && item.type === 'make-patch')
-										a(href="#{item.result}") #{item.taskStatus}
+									else if (item.status === 'done')
+										if (item.type === 'makePatch')
+											a(href="#{item.result}") #{item.taskStatus}
+										else
+											span.success #{item.taskStatus}
 									else
 										|#{item.taskStatus}
 								td.text-right

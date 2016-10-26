@@ -17,13 +17,13 @@ var mainController = mainController || (function ($) {
 	 * @param data Данные репозиториев
 	 * @returns {Promise}
 	 */
-	var makePatch = function (type, data) {
+	function makePatch(type, data) {
 		var $def = $.Deferred();
 		$.ajax({
 			type: 'POST',
 			url: '/api/queue/add',
 			data: {
-				type: 'make-patch',
+				type: 'makePatch',
 				data: data
 			},
 			dataType: 'json'
@@ -31,26 +31,41 @@ var mainController = mainController || (function ($) {
 			$def.resolve(res);
 		}).fail($def.reject);
 		return $def.promise();
-	};
+	}
+
+	/**
+	 * Обновить данные репозиториев
+	 * @returns {Promise}
+	 */
+	function updateSystemData() {
+		return $.ajax({
+			type: 'POST',
+			url: '/api/queue/add',
+			data: {
+				type: 'updateSystemData'
+			},
+			dataType: 'json'
+		});
+	}
 
 	/**
 	 * Получить текущие настройки
 	 * @returns {Promise}
 	 */
-	var getSettings = function () {
+	function getSettings() {
 		var $def = $.Deferred();
 		$.get('/api/settings').done(function (res) {
 			$def.resolve(res);
 		}).fail($def.reject);
 		return $def.promise();
-	};
+	}
 
 	/**
 	 * Записать текущие настройки
 	 * @param data Новые настройки
 	 * @returns {Promise}
 	 */
-	var setSettings = function (data) {
+	function setSettings(data) {
 		var $def = $.Deferred();
 		$.ajax({
 			type: 'POST',
@@ -63,13 +78,13 @@ var mainController = mainController || (function ($) {
 			$def.resolve(res);
 		}).fail($def.reject);
 		return $def.promise();
-	};
+	}
 
 	/**
 	 * Сбрасывает настройки
 	 * @returns {Promise}
 	 */
-	var resetSettings = function () {
+	function resetSettings() {
 		var $def = $.Deferred();
 		$.ajax({
 			type: 'DELETE',
@@ -78,13 +93,13 @@ var mainController = mainController || (function ($) {
 			$def.resolve(res);
 		}).fail($def.reject);
 		return $def.promise();
-	};
+	}
 
 	/**
 	 * Принудительно забирает блокировку
 	 * @returns {*}
 	 */
-	var forceLock = function () {
+	function forceLock() {
 		var $def = $.Deferred();
 		$.ajax({
 			type: 'GET',
@@ -93,13 +108,13 @@ var mainController = mainController || (function ($) {
 			$def.resolve(res);
 		}).fail($def.reject);
 		return $def.promise();
-	};
+	}
 
 	/**
 	 * Удаляет собранный файл
 	 * @returns {*}
 	 */
-	var deleteFile = function (name) {
+	function deleteFile(name) {
 		var $def = $.Deferred();
 		$.ajax({
 			type: 'GET',
@@ -111,42 +126,42 @@ var mainController = mainController || (function ($) {
 			$def.resolve(res);
 		}).fail($def.reject);
 		return $def.promise();
-	};
+	}
 
 	/**
 	 * Обновляет список очереди
 	 */
-	var reloadQueueList = function () {
+	function reloadQueueList() {
 		return $.ajax({
 			type: 'GET',
 			url: '/queue'
 		});
-	};
+	}
 
 	/**
 	 * Обновляет список файлов
 	 */
-	var reloadDownloadsList = function () {
+	function reloadDownloadsList() {
 		return $.ajax({
 			type: 'GET',
 			url: '/downloads'
 		});
-	};
+	}
 
 	/**
 	 * Считывает серверное время
 	 */
-	var reloadServerTime = function () {
+	function reloadServerTime() {
 		return $.ajax({
 			type: 'GET',
 			url: '/server-time'
 		});
-	};
+	}
 
 	/**
 	 * Удаляет элемент очереди
 	 */
-	var deleteFromQueue = function (id) {
+	function deleteFromQueue(id) {
 		return $.ajax({
 			type: 'POST',
 			url: '/api/queue/delete',
@@ -154,7 +169,7 @@ var mainController = mainController || (function ($) {
 				id: id
 			}
 		});
-	};
+	}
 
 	return {
 		getSettings: getSettings,
@@ -166,7 +181,8 @@ var mainController = mainController || (function ($) {
 		reloadQueueList: reloadQueueList,
 		deleteFromQueue: deleteFromQueue,
 		reloadServerTime: reloadServerTime,
-		reloadDownloadsList: reloadDownloadsList
+		reloadDownloadsList: reloadDownloadsList,
+		updateSystemData: updateSystemData
 	};
 
 })(jQuery);

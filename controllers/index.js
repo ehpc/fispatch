@@ -59,7 +59,7 @@ router.get('/downloads', function (req, res) {
 
 router.get('/', function (req, res) {
 	// Подгружаем данные репозиториев
-	Q.all([helper.getReposData(), helper.getSettings()]).then(function (data) {
+	Q.all([helper.getReposData(true), helper.getSettings()]).then(function (data) {
 		getDownloads().then(function (files) {
 			// Рендерим интерфейс
 			res.render('index', {

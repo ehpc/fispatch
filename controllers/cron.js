@@ -25,7 +25,7 @@ function processQueue() {
 		console.log('Обрабатываем задание ' + item.id);
 		item.status = 'processing';
 		if (queue.update(item)) {
-			proc.run('makePatch', item);
+			proc.run(item.type, item);
 		}
 		else {
 			console.log('Ошибка обработки задания ' + item.id);
@@ -33,8 +33,24 @@ function processQueue() {
 	}
 }
 
+/**
+ * Планировщик обновления данных сборщика
+ */
+function updateSystemData() {
+	// Если в очереди еще нет такого задания
+	if (!queue.list().some(function (item) {
+		return item.type === 'updateSystemData' && (item.status === 'queued' || item.status === 'processing');
+	})) {
+		console.log('Добавляем задание на обновление репозиториев.');
+		queue.add({
+			type: 'updateSystemData'
+		});
+	}
+}
+
 module.exports = {
 	start: function () {
 		setInterval(processQueue, 5000);
+		setInterval(updateSystemData, 60000 * 5);
 	}
 };

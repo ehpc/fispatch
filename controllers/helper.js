@@ -661,180 +661,202 @@ var helper = helper || (function () {
 
 	/**
 	 * Получает данные о репозиториях
+	 * @param cached Возвращать кэшированные данные
 	 * @returns {Q.Promise<null>}
 	 */
-	function getReposData() {
+	function getReposData(cached) {
 		var deferred = Q.defer();
 
-		readFile('data/settings.json', 'utf8').done(function (data) {
-			var settings = JSON.parse(data),
-				tempDir = settings.temp,
-				i;
+		// Проверяем, существует ли файл с кэшем
+		try {
+			fs.accessSync('data/repos-data.json', fs.R_OK);
+		}
+		catch (e) {
+			cached = false;
+		}
 
-			initAllIfNeeded().done(function () {
-				// Загружаем данные о ветках
-				getReposDataInner().done(function (data) {
-					console.log('Получили данные репозиториев');
-					deferred.resolve(data);
-				});
-			});
+		// Если нужно вернуть закэшированную версию и файл с кэшем существует
+		if (cached) {
+			console.log('Получаем кэшированные данные репозиториев.');
+			readFile('data/repos-data.json', 'utf8').then(function (data) {
+				deferred.resolve(JSON.parse(data));
+			}).fail(deferred.reject);
+		}
+		else {
+			console.log('Получаем данные репозиториев.');
+			readFile('data/settings.json', 'utf8').then(function (data) {
+				var settings = JSON.parse(data),
+					tempDir = settings.temp,
+					i;
 
-			/**
-			 * Достаёт данные о репозиториях
-			 */
-			function getReposDataInner() {
-				var deferred = Q.defer(),
-					asyncs0 = [],
-					asyncs1 = [],
-					asyncs2 = [],
-					data = {}; // Здесь будут храниться данные о репозиториях
+				initAllIfNeeded().then(function () {
+					// Загружаем данные о ветках
+					getReposDataInner().then(function (data) {
+						console.log('Получили данные репозиториев');
+						// Кэшируем данные
+						fs.writeFileSync('data/repos-data.json', JSON.stringify(data));
+						deferred.resolve(data);
+					}).fail(deferred.reject);
+				}).fail(deferred.reject);
+
+				/**
+				 * Достаёт данные о репозиториях
+				 */
+				function getReposDataInner() {
+					var deferred = Q.defer(),
+						asyncs0 = [],
+						asyncs1 = [],
+						asyncs2 = [],
+						data = {}; // Здесь будут храниться данные о репозиториях
 					/*
-					Пример структуры данных:
-					data = {
-						repo1: {
-							branches: ['70', ...],
-							branchesMetadata: {
-								'70': {
-									name: '70',
-									color: '#ff0000'
-								}, ...
-							},
-							revisions: [
-					 			{
-					 				rev: 3940,
-					 				branch: 70,
-					 				node: 3d34fd4h4d3443f34f343f34543,
-					 				desc: 'Description',
-					 				parent1: 234234ghj243g43432k4h3j2
-					 			}, ...
-							],
-							settings: {}
-						}
+					 Пример структуры данных:
+					 data = {
+					 repo1: {
+					 branches: ['70', ...],
+					 branchesMetadata: {
+					 '70': {
+					 name: '70',
+					 color: '#ff0000'
+					 }, ...
+					 },
+					 revisions: [
+					 {
+					 rev: 3940,
+					 branch: 70,
+					 node: 3d34fd4h4d3443f34f343f34543,
+					 desc: 'Description',
+					 parent1: 234234ghj243g43432k4h3j2
+					 }, ...
+					 ],
+					 settings: {}
+					 }
+					 }
+					 */
+
+					/**
+					 * Достаёт данные о ветках для указанного репозитория
+					 * @param repository Репозиторий
+					 * @returns {Q.Promise<null>}
+					 */
+					function getBranches(repository) {
+						var repositoryPath = path.join(tempDir, repository.alias),
+							deferred = Q.defer(),
+							i, colors, branchName;
+						console.log('Получаем список веток для репозитория «' + repository.alias + '»', 'hg branches -R ' + repositoryPath);
+						exec(hgCommand + ' branches -c -R ' + repositoryPath, execOptions)
+							.done(function (out) {
+								var rx = new RegExp('(.+)\\s+(\\d+):(\\w+)', 'ig'),
+									res;
+								if (typeof data[repository.alias] === 'undefined') {
+									data[repository.alias] = {
+										branches: [],
+										branchesMetadata: {},
+										revisions: [],
+										settings: repository
+									};
+								}
+								// Добавляем ветки
+								while ((res = rx.exec(out[0])) !== null) {
+									branchName = trimStr(res[1]);
+									data[repository.alias].branches.push(branchName);
+									data[repository.alias].branchesMetadata[branchName] = {
+										name: branchName
+									};
+								}
+								// Задаём цвета для веток
+								colors = colorsModule.getColors(data[repository.alias].branches.length);
+								for (i = 0; i < data[repository.alias].branches.length; i++) {
+									data[repository.alias].branchesMetadata[data[repository.alias].branches[i]].color = colors[i];
+								}
+								console.log('<<<Получили список веток для репозитория «' + repository.alias + '»');
+								deferred.resolve(null);
+							});
+						return deferred.promise;
 					}
-					*/
 
-				/**
-				 * Достаёт данные о ветках для указанного репозитория
-				 * @param repository Репозиторий
-				 * @returns {Q.Promise<null>}
-				 */
-				function getBranches(repository) {
-					var repositoryPath = path.join(tempDir, repository.alias),
-						deferred = Q.defer(),
-						i, colors, branchName;
-					console.log('Получаем список веток для репозитория «' + repository.alias + '»', 'hg branches -R ' + repositoryPath);
-					exec(hgCommand + ' branches -c -R ' + repositoryPath, execOptions)
-						.done(function (out) {
-							var rx = new RegExp('(.+)\\s+(\\d+):(\\w+)', 'ig'),
-								res;
-							if (typeof data[repository.alias] === 'undefined') {
-								data[repository.alias] = {
-									branches: [],
-									branchesMetadata: {},
-									revisions: [],
-									settings: repository
-								};
-							}
-							// Добавляем ветки
-							while ((res = rx.exec(out[0])) !== null) {
-								branchName = trimStr(res[1]);
-								data[repository.alias].branches.push(branchName);
-								data[repository.alias].branchesMetadata[branchName] = {
-									name: branchName
-								};
-							}
-							// Задаём цвета для веток
-							colors = colorsModule.getColors(data[repository.alias].branches.length);
-							for (i = 0; i < data[repository.alias].branches.length; i++) {
-								data[repository.alias].branchesMetadata[data[repository.alias].branches[i]].color = colors[i];
-							}
-							console.log('<<<Получили список веток для репозитория «' + repository.alias + '»');
-							deferred.resolve(null);
-						});
-					return deferred.promise;
-				}
-
-				/**
-				 * Достаёт данные о ревизиях для указанного репозитория
-				 * @param repository Репозиторий
-				 * @returns {Q.Promise<null>}
-				 */
-				function getRevisions(repository) {
-					var repositoryPath = path.join(tempDir, repository.alias),
-						deferred = Q.defer();
-					console.log('Получаем список ревизий для репозитория «' + repository.alias + '»', hgCommand + ' log --limit 100 --debug --template "rev:{rev};; branch:{branches};; node:{node};; desc:{desc|firstline};; parents:{parents};;\n" -R ' + repositoryPath);
-					exec(hgCommand + ' log --limit ' + repository.revisionsLimit + ' --debug --template "rev:{rev};; branch:{branches};; node:{node};; desc:{desc|firstline};; parents:{parents};;\n" -R ' + repositoryPath, execOptions)
-						.done(function (out) {
-							var rx = new RegExp('rev:(\\d+);; branch:([^;]*);; node:(\\w+);; desc:(.+);; parents:[-\\d]+:(\\w+) .+;;', 'ig'),
-								res;
-							if (typeof data[repository.alias] === 'undefined') {
-								data[repository.alias] = {
-									branches: [],
-									branchesMetadata: {},
-									revisions: []
-								};
-							}
-							// Добавляем ревизии
-							while ((res = rx.exec(out[0])) !== null) {
-								var branchName = trimStr(res[2]),
-									descTrimmed = res[4].substr(0, 38);
-								if (!branchName) {
-									branchName = 'default';
+					/**
+					 * Достаёт данные о ревизиях для указанного репозитория
+					 * @param repository Репозиторий
+					 * @returns {Q.Promise<null>}
+					 */
+					function getRevisions(repository) {
+						var repositoryPath = path.join(tempDir, repository.alias),
+							deferred = Q.defer();
+						console.log('Получаем список ревизий для репозитория «' + repository.alias + '»', hgCommand + ' log --limit 100 --debug --template "rev:{rev};; branch:{branches};; node:{node};; desc:{desc|firstline};; parents:{parents};;\n" -R ' + repositoryPath);
+						exec(hgCommand + ' log --limit ' + repository.revisionsLimit + ' --debug --template "rev:{rev};; branch:{branches};; node:{node};; desc:{desc|firstline};; parents:{parents};;\n" -R ' + repositoryPath, execOptions)
+							.done(function (out) {
+								var rx = new RegExp('rev:(\\d+);; branch:([^;]*);; node:(\\w+);; desc:(.+);; parents:[-\\d]+:(\\w+) .+;;', 'ig'),
+									res;
+								if (typeof data[repository.alias] === 'undefined') {
+									data[repository.alias] = {
+										branches: [],
+										branchesMetadata: {},
+										revisions: []
+									};
 								}
-								if (!data[repository.alias].branchesMetadata[branchName]) {
-									console.error('Нет данных для репозитория ' + repository.alias + ' и ветки ' + branchName);
-									console.error(JSON.stringify(data[repository.alias]));
+								// Добавляем ревизии
+								while ((res = rx.exec(out[0])) !== null) {
+									var branchName = trimStr(res[2]),
+										descTrimmed = res[4].substr(0, 38);
+									if (!branchName) {
+										branchName = 'default';
+									}
+									if (!data[repository.alias].branchesMetadata[branchName]) {
+										console.error('Нет данных для репозитория ' + repository.alias + ' и ветки ' + branchName);
+										console.error(JSON.stringify(data[repository.alias]));
+									}
+									// Добавляем ревизию в список
+									data[repository.alias].revisions.push({
+										rev: res[1],
+										branch: branchName,
+										node: res[3],
+										desc: descTrimmed + ((descTrimmed.length < res[4].length) ? '...' : ''),
+										parent1: res[5],
+										color: data[repository.alias].branchesMetadata[branchName].color
+									});
 								}
-								// Добавляем ревизию в список
-								data[repository.alias].revisions.push({
-									rev: res[1],
-									branch: branchName,
-									node: res[3],
-									desc: descTrimmed + ((descTrimmed.length < res[4].length) ? '...' : ''),
-									parent1: res[5],
-									color: data[repository.alias].branchesMetadata[branchName].color
-								});
-							}
-							console.log('<<<Получили список ревизий для репозитория «' + repository.alias + '»');
-							deferred.resolve(null);
-						});
-					return deferred.promise;
-				}
+								console.log('<<<Получили список ревизий для репозитория «' + repository.alias + '»');
+								deferred.resolve(null);
+							});
+						return deferred.promise;
+					}
 
-				// Проходимся по всем репозиториям
-				console.log('updateRepo');
-				for (i = 0; i < settings.repositories.length; i++) {
-					// Предварительно обновим репозитории
-					asyncs0.push(updateRepo(settings.repositories[i], tempDir));
-				}
-				Q.all(asyncs0).done(function () {
-					console.log('getBranches');
+					// Проходимся по всем репозиториям
+					console.log('updateRepo');
 					for (i = 0; i < settings.repositories.length; i++) {
-						// Создаём стек функций, которые достанут данные о ветках репозитория
-						asyncs1.push(getBranches(settings.repositories[i]));
+						// Предварительно обновим репозитории
+						asyncs0.push(updateRepo(settings.repositories[i], tempDir));
 					}
-					Q.all(asyncs1).done(function () {
-						console.log('getRevisions');
+					Q.all(asyncs0).done(function () {
+						console.log('getBranches');
 						for (i = 0; i < settings.repositories.length; i++) {
-							// Создаём стек функций, которые достанут данные о ревизиях
-							asyncs2.push(getRevisions(settings.repositories[i]));
+							// Создаём стек функций, которые достанут данные о ветках репозитория
+							asyncs1.push(getBranches(settings.repositories[i]));
 						}
-						Q.all(asyncs2).done(function () {
-							// Сортируем репозитории и дополняем объекты данными
-							var ordered = {};
+						Q.all(asyncs1).done(function () {
+							console.log('getRevisions');
 							for (i = 0; i < settings.repositories.length; i++) {
-								ordered[settings.repositories[i].alias] = data[settings.repositories[i].alias];
-								ordered[settings.repositories[i].alias].hidden = settings.repositories[i].hidden;
+								// Создаём стек функций, которые достанут данные о ревизиях
+								asyncs2.push(getRevisions(settings.repositories[i]));
 							}
-							data = ordered;
-							deferred.resolve(data);
+							Q.all(asyncs2).done(function () {
+								// Сортируем репозитории и дополняем объекты данными
+								var ordered = {};
+								for (i = 0; i < settings.repositories.length; i++) {
+									ordered[settings.repositories[i].alias] = data[settings.repositories[i].alias];
+									ordered[settings.repositories[i].alias].hidden = settings.repositories[i].hidden;
+								}
+								data = ordered;
+								deferred.resolve(data);
+							});
 						});
 					});
-				});
-				return deferred.promise;
-			}
+					return deferred.promise;
+				}
 
-		});
+			}).fail(deferred.reject);
+		}
+
 		return deferred.promise;
 	}
 
