@@ -1,99 +1,102 @@
 {
-	"repositories": [
-		{
-			"address": "http://fcs-mercurial.fisgroup.ru/web/akbarsweb/",
-			"alias": "fcs",
-			"cloneRev": "10100",
-			"revisionsLimit": "50",
-			"withVersion": true,
-			"withDistrib": true,
-			"doNotClone": true,
-			"beforeDownload": {
-				"controller": "web",
-				"action": "beforeDownload",
-				"options": {
-					"fileList": [
-						"xsl/base-uri-def.xsl",
-						"js/properties/extend.js"
-					]
-				}
-			}
-		},
-		{
-			"address": "http://fcs-mercurial.fisgroup.ru/web/v3/",
-			"alias": "v3",
-			"cloneRev": "88",
-			"revisionsLimit": "50",
-			"withVersion": true,
-			"withDistrib": true,
-			"exclude": [
-				"process.ini"
-			],
-			"beforeDownload": {
-				"controller": "web",
-				"action": "beforeDownload",
-				"options": {
-					"fileList": [
-						"process.ini"
-					]
-				}
-			}
-		},
-		{
-			"address": "http://fcs-mercurial.fisgroup.ru/Server/Schemas",
-			"alias": "schemas",
-			"cloneRev": "0",
-			"revisionsLimit": "50",
-			"hgFilter": "and not grep(Слияние)",
-			"exclude": [
-				"schemas_definition"
-			],
-			"beforeDownload": {
-				"controller": "oracle",
-				"action": "beforeDownload",
-				"options": {
-					"mergeFrom": {
-						"alias": "oracleScripts",
-						"path": "/sql/"
-					},
-					"setup.sql": {
-						"path": "data/oracle/template_setup.sql",
-						"optionalBlockRegex": "--Если имя схемы = __SCHEMA__, то вставить кусок\\s+--Начало вставки для __SCHEMA__[\\s\\S]+?--Конец вставки для __SCHEMA__",
-						"filesRegex": "--Включить все файлы из папки __SCHEMA__(\\/([^,\\s]+),?)?( с расширением \\.(\\S+))?\\s+--(\\S+)\\s+--пример\\s+\\S+\\s"
-					},
-					"data.sql": {
-						"path": "data/oracle/template_data.sql",
-						"optionalBlockRegex": "--Если имя схемы = __SCHEMA__, то вставить кусок\\s+--Начало вставки для __SCHEMA__[\\s\\S]+?--Конец вставки для __SCHEMA__",
-						"filesRegex": "--Включить все файлы из папки __SCHEMA__(\\/([^,\\s]+),?)?( с расширением \\.(\\S+))?\\s+--(\\S+)\\s+--пример\\s+\\S+\\s"
-					},
-					"config.ini": {
-						"path": "data/oracle/template_config.ini",
-						"replacements": [
-							{
-								"from": "patch_ver='[^\\']*'",
-								"to": "patch_ver='__NAME__'",
-								"__CUSTOM__": "Произвольная строка"
-							}
-						]
-					},
-					"setup.bat": {
-						"path": "data/oracle/template_setup.bat",
-						"filesRegex": "(rem Включить файла для всех схем, которые есть в патче\\r?\\n)(.+)"
-					}
-				}
-			}
-		},
-		{
-			"address": "http://fcs-mercurial.fisgroup.ru/Server/Scripts/",
-			"alias": "oracleScripts",
-			"cloneRev": "0",
-			"revisionsLimit": "50",
-			"hidden": true
-		}
-	],
-	"temp": "/root/fispatch/temp",
-	"svn": "svn://svn/satc.dev/FCS/Patches/DISTRIBUTION",
-	"svnWebDirName": "web",
-	"hgCommand": "hg",
-	"processMaxBuffer": "5000000"
+    "repositories": [
+        {
+            "address": "http://fcs-mercurial.fisgroup.ru/web/akbarsweb/",
+            "alias": "fcs",
+            "cloneRev": "10100",
+            "revisionsLimit": "50",
+            "withVersion": true,
+            "withDistrib": true,
+            "doNotClone": true,
+            "beforeDownload": {
+                "controller": "web",
+                "action": "beforeDownload",
+                "options": {
+                    "fileList": [
+                        "xsl/base-uri-def.xsl",
+                        "js/properties/extend.js"
+                    ]
+                }
+            }
+        },
+        {
+            "address": "http://fcs-mercurial.fisgroup.ru/web/v3/",
+            "alias": "v3",
+            "cloneRev": "88",
+            "revisionsLimit": "50",
+            "withVersion": true,
+            "withDistrib": true,
+            "exclude": [
+                "process.ini"
+            ],
+            "beforeDownload": {
+                "controller": "web",
+                "action": "beforeDownload",
+                "options": {
+                    "fileList": [
+                        "process.ini"
+                    ]
+                }
+            }
+        },
+        {
+            "address": "http://fcs-mercurial.fisgroup.ru/Server/Schemas",
+            "alias": "schemas",
+            "cloneRev": "0",
+            "revisionsLimit": "50",
+            "hgFilter": "and not grep(Слияние)",
+            "exclude": [
+                "schemas_definition"
+            ],
+            "beforeDownload": {
+                "controller": "oracle",
+                "action": "beforeDownload",
+                "options": {
+                    "mergeFrom": {
+                        "alias": "oracleScripts",
+                        "path": "/sql/"
+                    },
+                    "setup.sql": {
+                        "path": "data/oracle/template_setup.sql",
+                        "optionalBlockRegex": "--Если имя схемы = __SCHEMA__, то вставить кусок\\s+--Начало вставки для __SCHEMA__[\\s\\S]+?--Конец вставки для __SCHEMA__",
+                        "filesRegex": "--Включить все файлы из папки __SCHEMA__(\\/([^,\\s]+),?)?( с расширением \\.(\\S+))?\\s+--(\\S+)\\s+--пример\\s+\\S+\\s"
+                    },
+                    "data.sql": {
+                        "path": "data/oracle/template_data.sql",
+                        "optionalBlockRegex": "--Если имя схемы = __SCHEMA__, то вставить кусок\\s+--Начало вставки для __SCHEMA__[\\s\\S]+?--Конец вставки для __SCHEMA__",
+                        "filesRegex": "--Включить все файлы из папки __SCHEMA__(\\/([^,\\s]+),?)?( с расширением \\.(\\S+))?\\s+--(\\S+)\\s+--пример\\s+\\S+\\s"
+                    },
+                    "config.ini": {
+                        "path": "data/oracle/template_config.ini",
+                        "replacements": [
+                            {
+                                "from": "patch_ver='[^\\']*'",
+                                "to": "patch_ver='__NAME__'",
+                                "__CUSTOM__": "Произвольная строка"
+                            }
+                        ]
+                    },
+                    "setup.bat": {
+                        "path": "data/oracle/template_setup.bat",
+                        "filesRegex": "(rem Включить файла для всех схем, которые есть в патче\\r?\\n)(.+)"
+                    }
+                }
+            }
+        },
+        {
+            "address": "http://fcs-mercurial.fisgroup.ru/Server/Scripts/",
+            "alias": "oracleScripts",
+            "cloneRev": "0",
+            "revisionsLimit": "50",
+            "hidden": true
+        }
+    ],
+    "temp": "/root/fispatch/temp",
+    "svn": "svn://svn/satc.dev/FCS/Patches/DISTRIBUTION",
+    "svnWebDirName": "web",
+    "hgCommand": "hg",
+    "processMaxBuffer": "5000000",
+    "ipMap": {
+        "10.10.3.122": "ehpc2"
+    }
 }

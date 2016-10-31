@@ -54,3 +54,8 @@ span.success {
 .showHelp .help {
 	display: block;
 }
+
+.wrap {
+	word-break: break-word;
+}
+
